@@ -2622,6 +2622,11 @@
             <button id="liffPromoBtn" class="liff-promo-btn" onclick="sendLiffPromoMessage()">
               取得最新優惠資訊
             </button>
+            
+            <!-- 臨時調試按鈕：清除 LIFF 授權 -->
+            <button id="liffLogoutBtn" class="liff-promo-btn" onclick="clearLiffAuth()" style="background: #FF6B6B; margin-top: 10px;">
+              🔄 清除授權並重新登入
+            </button>
           </div>
           <!-- 浮動圖片 -->
           <img
@@ -7013,10 +7018,38 @@
         )
       }
 
+      // 清除 LIFF 授權並重新登入
+      async function clearLiffAuth() {
+        try {
+          console.log('🔄 清除 LIFF 授權...')
+          
+          // 初始化 LIFF
+          const initialized = await initLiff()
+          if (!initialized) {
+            alert('LIFF 初始化失敗')
+            return
+          }
+          
+          // 登出
+          if (liff.isLoggedIn()) {
+            liff.logout()
+            console.log('✅ 已登出')
+          }
+          
+          // 重新整理頁面以重新授權
+          alert('授權已清除，頁面即將重新整理。\n\n請重新點擊「取得最新優惠資訊」按鈕進行授權。')
+          window.location.reload()
+        } catch (error) {
+          console.error('❌ 清除授權失敗:', error)
+          alert('清除授權失敗: ' + error.message)
+        }
+      }
+
       // 將函數加到 window 對象供全域使用
       window.sendLiffPromoMessage = sendLiffPromoMessage
       window.initLiff = initLiff
       window.closeLiffAlert = closeLiffAlert
+      window.clearLiffAuth = clearLiffAuth
 
       // 頁面載入時自動初始化 LIFF（可選）
       // window.addEventListener('DOMContentLoaded', () => {
