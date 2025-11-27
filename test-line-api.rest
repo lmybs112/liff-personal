@@ -21,7 +21,7 @@ POST https://script.google.com/macros/s/AKfycbyO2HmHaQu_vcRiemSbWlJ0ZvH2OnLizJoM
 Content-Type: application/json
 
 {
-  "userId": "YOUR_LINE_USER_ID",
+  "userId": "Ud4fd1b67ee7dc773d1ad943fdf036f90",
   "messages": [
     {
       "type": "text",
@@ -37,7 +37,7 @@ POST https://script.google.com/macros/s/AKfycbyO2HmHaQu_vcRiemSbWlJ0ZvH2OnLizJoM
 Content-Type: application/json
 
 {
-  "userId": "YOUR_LINE_USER_ID",
+  "userId": "Ud4fd1b67ee7dc773d1ad943fdf036f90",
   "messages": [
     {
       "type": "flex",

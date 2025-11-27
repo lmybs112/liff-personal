@@ -2639,6 +2639,31 @@
               <div id="userNameDisplay" style="margin-top: 8px; font-size: 13px; color: #666;">
               </div>
             </div>
+            
+            <!-- 錯誤訊息顯示區域 -->
+            <div id="errorDisplay" style="display: none; margin-top: 15px; padding: 15px; background: #FEE2E2; border-radius: 12px; border: 2px solid #FCA5A5;">
+              <div style="font-size: 14px; color: #991B1B; margin-bottom: 8px; font-weight: 600;">
+                ❌ 錯誤訊息
+              </div>
+              <div id="errorMessage" style="font-size: 13px; color: #7F1D1D; line-height: 1.6; white-space: pre-wrap;">
+              </div>
+              <button onclick="document.getElementById('errorDisplay').style.display='none'" style="margin-top: 10px; padding: 8px 16px; background: #DC2626; color: white; border: none; border-radius: 8px; cursor: pointer; font-size: 13px;">
+                關閉
+              </button>
+            </div>
+            
+            <!-- 成功訊息顯示區域 -->
+            <div id="successDisplay" style="display: none; margin-top: 15px; padding: 15px; background: #D1FAE5; border-radius: 12px; border: 2px solid #6EE7B7;">
+              <div style="font-size: 14px; color: #065F46; margin-bottom: 8px; font-weight: 600;">
+                ✅ 發送成功！
+              </div>
+              <div id="successMessage" style="font-size: 13px; color: #047857; line-height: 1.6;">
+                訊息已成功發送到您的 LINE
+              </div>
+              <button onclick="document.getElementById('successDisplay').style.display='none'" style="margin-top: 10px; padding: 8px 16px; background: #10B981; color: white; border: none; border-radius: 8px; cursor: pointer; font-size: 13px;">
+                關閉
+              </button>
+            </div>
           </div>
           <!-- 浮動圖片 -->
           <img
@@ -6715,6 +6740,13 @@
       // 取得 LIFF 使用者 UID 並發送 Flex Message
       async function sendLiffPromoMessage() {
         const btn = document.getElementById('liffPromoBtn')
+        const errorDisplay = document.getElementById('errorDisplay')
+        const errorMessage = document.getElementById('errorMessage')
+        const successDisplay = document.getElementById('successDisplay')
+        
+        // 隱藏之前的訊息
+        errorDisplay.style.display = 'none'
+        successDisplay.style.display = 'none'
         
         // 防止重複點擊
         if (btn.disabled) return
@@ -6726,61 +6758,136 @@
 
         try {
           console.log('🚀 開始發送優惠訊息...')
+          console.log('📍 步驟 1/4：初始化 LIFF...')
           
           // 初始化 LIFF
-          console.log('1️⃣ 初始化 LIFF...')
           const initialized = await initLiff()
           if (!initialized) {
-            throw new Error('LIFF 初始化失敗')
+            throw new Error('LIFF 初始化失敗，請確認 LIFF ID 是否正確')
           }
           console.log('✅ LIFF 初始化成功')
 
-          // 檢查登入狀態，如果未登入則自動登入
+          // 檢查登入狀態
           if (!liff.isLoggedIn()) {
             console.log('⚠️ 未登入，開始登入流程...')
-            liff.login()
+            errorMessage.textContent = '需要登入 LINE 帳號\n\n頁面即將跳轉到登入頁面...'
+            errorDisplay.style.display = 'block'
+            setTimeout(() => {
+              liff.login()
+            }, 1500)
             return
           }
 
+          console.log('📍 步驟 2/4：取得使用者資訊...')
+          
           // 取得使用者資訊
-          console.log('2️⃣ 取得使用者資訊...')
           const profile = await liff.getProfile()
           const userId = profile.userId
           console.log('✅ User ID:', userId)
           console.log('✅ 名稱:', profile.displayName)
 
+          console.log('📍 步驟 3/4：準備商品資料...')
+          
           // 取得優惠商品資料
-          console.log('3️⃣ 取得優惠商品資料...')
           const promoProducts = getPromoProducts()
           console.log('✅ 商品數量:', promoProducts.length)
 
+          console.log('📍 步驟 4/4：發送訊息到 LINE...')
+          
           // 發送訊息
-          console.log('4️⃣ 發送訊息...')
           await sendFlexMessage(userId, promoProducts)
 
           // 顯示成功訊息
-          console.log('✅ 發送成功！')
-          alert('✅ 訊息已發送！\n\n請查看您的 LINE 聊天室')
+          console.log('🎉 全部完成！')
+          successDisplay.style.display = 'block'
           
         } catch (error) {
-          console.error('❌ 錯誤:', error)
+          console.error('❌ 發送失敗:', error)
+          console.error('❌ 錯誤堆疊:', error.stack)
           
-          // 簡化錯誤訊息
-          let userMessage = '發送失敗'
+          // 詳細的錯誤訊息
+          let detailedMessage = ''
           
           if (error.message.includes('permission') || error.message.includes('scope')) {
-            userMessage = '權限不足\n\n請確認已在 LINE Developers 設定 LIFF Scopes:\n✓ profile\n✓ openid'
-          } else if (error.message.includes('Failed to fetch') || error.message.includes('Load failed') || error.message.includes('網路')) {
-            userMessage = '網路連線失敗\n\n可能原因：\n1. 網路不穩定\n2. API 伺服器無法連接\n3. 請稍後再試'
+            detailedMessage = `🚫 權限不足
+
+❌ 錯誤：${error.message}
+
+📋 解決步驟：
+1. 前往 LINE Developers Console
+2. 選擇您的 Channel → LIFF
+3. 編輯 LIFF App (ID: 2008576354-nwJ6w230)
+4. 在 Scopes 勾選：
+   ☑️ profile
+   ☑️ openid
+5. 點擊「Update」儲存
+6. 在 LINE 中：設定 → 隱私設定 → 已授權的應用程式
+7. 移除此 LIFF App
+8. 重新開啟並授權
+
+⚠️ 這是最常見的問題！請務必完成上述步驟。`
+          } else if (error.message.includes('Failed to fetch') || error.message.includes('Load failed') || error.message.includes('網路') || error.message.includes('超時')) {
+            detailedMessage = `🌐 網路連線問題
+
+❌ 錯誤：${error.message}
+
+💡 但是 API 測試成功了！
+這表示 API 本身沒問題，可能是：
+
+可能原因：
+1. 手機網路不穩定
+2. LIFF 應用無法連接到 Google Apps Script
+3. 請求超時（15秒）
+
+🔧 解決方式：
+1. 檢查手機網路連線
+2. 嘗試切換 WiFi/4G
+3. 重新載入頁面
+4. 稍後再試
+
+📊 API 測試結果：✅ 成功
+📱 LIFF 發送結果：❌ 失敗
+
+這很可能是暫時性的網路問題。`
           } else if (error.message.includes('401') || error.message.includes('Unauthorized')) {
-            userMessage = 'LINE Token 無效\n\n請更新 Google Apps Script 中的 Channel Access Token'
-          } else if (error.message.includes('400') || error.message.includes('Bad Request')) {
-            userMessage = '訊息格式錯誤\n\n請聯繫技術支援'
+            detailedMessage = `🔐 認證失敗
+
+❌ 錯誤：${error.message}
+
+奇怪！API 測試明明成功了，但 LIFF 發送失敗...
+
+可能原因：
+1. LINE Channel Access Token 在測試後被重新簽發
+2. Token 權限設定不正確
+
+🔧 解決方式：
+1. 確認 Google Apps Script 中的 Token 是最新的
+2. 重新部署 Google Apps Script
+3. 再試一次`
           } else {
-            userMessage = '發送失敗\n\n' + error.message
+            detailedMessage = `❌ 發送失敗
+
+錯誤訊息：${error.message}
+
+📊 診斷資訊：
+• API 測試：✅ 成功
+• LIFF 初始化：${liffInitialized ? '✅ 成功' : '❌ 失敗'}
+• 登入狀態：${liff.isLoggedIn() ? '✅ 已登入' : '❌ 未登入'}
+• 環境：${liff.isInClient() ? 'LINE App' : '外部瀏覽器'}
+
+🔧 建議：
+1. 重新整理頁面
+2. 檢查上方顯示的 User ID 是否正確
+3. 確認 LIFF Scopes 設定正確
+
+完整錯誤：${error.stack || error.toString()}`
           }
           
-          alert('❌ ' + userMessage)
+          errorMessage.textContent = detailedMessage
+          errorDisplay.style.display = 'block'
+          
+          // 滾動到錯誤訊息
+          errorDisplay.scrollIntoView({ behavior: 'smooth', block: 'nearest' })
           
         } finally {
           // 恢復按鈕狀態
@@ -6842,6 +6949,7 @@
             userId: userId,
             messages: [flexMessage]
           }
+          console.error('requestBody----', requestBody)
           
           const response = await fetch(apiEndpoint, {
             method: 'POST',
