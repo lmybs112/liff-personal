@@ -2622,6 +2622,23 @@
             <button id="liffPromoBtn" class="liff-promo-btn" onclick="sendLiffPromoMessage()">
               取得最新優惠資訊
             </button>
+            
+            <!-- LINE User ID 顯示區域 -->
+            <div id="userIdDisplay" style="display: none; margin-top: 20px; padding: 15px; background: #f9fafb; border-radius: 12px; border: 2px solid #e5e7eb;">
+              <div style="font-size: 14px; color: #666; margin-bottom: 8px; font-weight: 600;">
+                👤 您的 LINE User ID：
+              </div>
+              <div style="display: flex; align-items: center; gap: 10px;">
+                <div id="userIdValue" style="flex: 1; font-family: 'Monaco', 'Courier New', monospace; font-size: 13px; color: #1E40AF; background: white; padding: 10px; border-radius: 8px; word-break: break-all; line-height: 1.5;">
+                  載入中...
+                </div>
+                <button id="copyUserIdBtn" onclick="copyUserId()" style="padding: 10px 16px; background: #1E40AF; color: white; border: none; border-radius: 8px; cursor: pointer; font-size: 14px; white-space: nowrap; min-width: 60px;">
+                  📋 複製
+                </button>
+              </div>
+              <div id="userNameDisplay" style="margin-top: 8px; font-size: 13px; color: #666;">
+              </div>
+            </div>
           </div>
           <!-- 浮動圖片 -->
           <img
@@ -7115,12 +7132,126 @@
         }
       }
 
+      // 自動顯示 User ID
+      async function displayUserId() {
+        const displayDiv = document.getElementById('userIdDisplay')
+        const userIdValue = document.getElementById('userIdValue')
+        const userNameDisplay = document.getElementById('userNameDisplay')
+        
+        try {
+          console.log('🔑 開始取得 User ID...')
+          
+          // 初始化 LIFF
+          const initialized = await initLiff()
+          if (!initialized) {
+            userIdValue.textContent = '⚠️ LIFF 初始化失敗'
+            userIdValue.style.color = '#FF6B6B'
+            displayDiv.style.display = 'block'
+            return
+          }
+          
+          // 檢查登入狀態
+          if (!liff.isLoggedIn()) {
+            userIdValue.textContent = '⚠️ 未登入 LINE'
+            userIdValue.style.color = '#FF6B6B'
+            displayDiv.style.display = 'block'
+            return
+          }
+          
+          // 取得使用者資訊
+          const profile = await liff.getProfile()
+          userIdValue.textContent = profile.userId
+          userIdValue.style.color = '#1E40AF'
+          
+          // 顯示使用者名稱
+          userNameDisplay.innerHTML = `<strong>名稱：</strong>${profile.displayName || '未知'}`
+          
+          // 顯示區域
+          displayDiv.style.display = 'block'
+          
+          console.log('✅ User ID 已顯示:', profile.userId)
+          
+        } catch (error) {
+          console.error('❌ 取得 User ID 失敗:', error)
+          userIdValue.textContent = '❌ 取得失敗: ' + error.message
+          userIdValue.style.color = '#FF6B6B'
+          displayDiv.style.display = 'block'
+        }
+      }
+      
+      // 複製 User ID
+      function copyUserId() {
+        const userIdValue = document.getElementById('userIdValue').textContent
+        const copyBtn = document.getElementById('copyUserIdBtn')
+        
+        if (userIdValue.includes('載入中') || userIdValue.includes('失敗') || userIdValue.includes('⚠️') || userIdValue.includes('❌')) {
+          alert('沒有可複製的 User ID')
+          return
+        }
+        
+        // 複製到剪貼簿
+        if (navigator.clipboard && navigator.clipboard.writeText) {
+          navigator.clipboard.writeText(userIdValue)
+            .then(() => {
+              // 顯示成功提示
+              const originalText = copyBtn.textContent
+              copyBtn.textContent = '✅ 已複製'
+              copyBtn.style.background = '#10b981'
+              
+              setTimeout(() => {
+                copyBtn.textContent = originalText
+                copyBtn.style.background = '#1E40AF'
+              }, 2000)
+            })
+            .catch(err => {
+              console.error('複製失敗:', err)
+              alert('複製失敗，請手動複製：\n' + userIdValue)
+            })
+        } else {
+          // 回退方案：使用 textarea
+          const textarea = document.createElement('textarea')
+          textarea.value = userIdValue
+          textarea.style.position = 'fixed'
+          textarea.style.opacity = '0'
+          document.body.appendChild(textarea)
+          textarea.select()
+          
+          try {
+            document.execCommand('copy')
+            const originalText = copyBtn.textContent
+            copyBtn.textContent = '✅ 已複製'
+            copyBtn.style.background = '#10b981'
+            
+            setTimeout(() => {
+              copyBtn.textContent = originalText
+              copyBtn.style.background = '#1E40AF'
+            }, 2000)
+          } catch (err) {
+            console.error('複製失敗:', err)
+            alert('複製失敗，請手動複製：\n' + userIdValue)
+          }
+          
+          document.body.removeChild(textarea)
+        }
+      }
+
       // 將函數加到 window 對象供全域使用
       window.sendLiffPromoMessage = sendLiffPromoMessage
       window.initLiff = initLiff
       window.closeLiffAlert = closeLiffAlert
       window.clearLiffAuth = clearLiffAuth
       window.testSimpleMessage = testSimpleMessage
+      window.displayUserId = displayUserId
+      window.copyUserId = copyUserId
+      
+      // 頁面載入時自動顯示 User ID
+      window.addEventListener('DOMContentLoaded', () => {
+        console.log('📄 頁面載入完成，準備取得 User ID...')
+        // 延遲 500ms 讓 LIFF SDK 完全載入
+        setTimeout(() => {
+          displayUserId()
+        }, 500)
+      })
 
       // 頁面載入時自動初始化 LIFF（可選）
       // window.addEventListener('DOMContentLoaded', () => {

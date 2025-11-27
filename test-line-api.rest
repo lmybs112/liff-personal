@@ -1,0 +1,277 @@
+### ===========================================
+### LINE Flex Message API 測試檔案
+### ===========================================
+### 
+### 使用方法：
+### 1. 安裝 VS Code 擴充套件：REST Client
+### 2. 將 YOUR_LINE_USER_ID 替換為您的實際 LINE User ID
+### 3. 點擊「Send Request」測試
+###
+### ===========================================
+
+### 測試 1：檢查 API 狀態（GET 請求）
+### 這個應該會返回 HTML 狀態頁面
+GET https://script.google.com/macros/s/AKfycbyO2HmHaQu_vcRiemSbWlJ0ZvH2OnLizJoMu3lhTRyrcTasvuMAj1w5cd0ucL2RLyDSFw/exec
+
+###
+
+### 測試 2：發送簡單文字訊息
+### 請將 YOUR_LINE_USER_ID 替換為您的 User ID
+POST https://script.google.com/macros/s/AKfycbyO2HmHaQu_vcRiemSbWlJ0ZvH2OnLizJoMu3lhTRyrcTasvuMAj1w5cd0ucL2RLyDSFw/exec
+Content-Type: application/json
+
+{
+  "userId": "YOUR_LINE_USER_ID",
+  "messages": [
+    {
+      "type": "text",
+      "text": "🧪 測試訊息\n\n這是來自 API 測試的訊息\n\n如果您看到這則訊息，表示 API 運作正常！\n\n測試時間：{{$datetime iso8601}}"
+    }
+  ]
+}
+
+###
+
+### 測試 3：發送簡單的 Flex Message（單一商品）
+POST https://script.google.com/macros/s/AKfycbyO2HmHaQu_vcRiemSbWlJ0ZvH2OnLizJoMu3lhTRyrcTasvuMAj1w5cd0ucL2RLyDSFw/exec
+Content-Type: application/json
+
+{
+  "userId": "YOUR_LINE_USER_ID",
+  "messages": [
+    {
+      "type": "flex",
+      "altText": "測試商品優惠",
+      "contents": {
+        "type": "bubble",
+        "hero": {
+          "type": "image",
+          "url": "https://via.placeholder.com/400x300/667eea/ffffff?text=Test+Product",
+          "size": "full",
+          "aspectRatio": "4:3",
+          "aspectMode": "cover"
+        },
+        "body": {
+          "type": "box",
+          "layout": "vertical",
+          "contents": [
+            {
+              "type": "text",
+              "text": "測試商品",
+              "weight": "bold",
+              "size": "xl",
+              "color": "#1E40AF"
+            },
+            {
+              "type": "box",
+              "layout": "baseline",
+              "margin": "md",
+              "contents": [
+                {
+                  "type": "text",
+                  "text": "NT$ 1,280",
+                  "size": "xl",
+                  "color": "#FF6B6B",
+                  "weight": "bold"
+                }
+              ]
+            }
+          ]
+        },
+        "footer": {
+          "type": "box",
+          "layout": "vertical",
+          "contents": [
+            {
+              "type": "button",
+              "action": {
+                "type": "uri",
+                "label": "立即查看",
+                "uri": "https://example.com"
+              },
+              "style": "primary",
+              "color": "#1E40AF"
+            }
+          ]
+        }
+      }
+    }
+  ]
+}
+
+###
+
+### 測試 4：發送完整的多商品 Flex Message（輪播）
+POST https://script.google.com/macros/s/AKfycbyO2HmHaQu_vcRiemSbWlJ0ZvH2OnLizJoMu3lhTRyrcTasvuMAj1w5cd0ucL2RLyDSFw/exec
+Content-Type: application/json
+
+{
+  "userId": "YOUR_LINE_USER_ID",
+  "messages": [
+    {
+      "type": "flex",
+      "altText": "精選商品推薦",
+      "contents": {
+        "type": "carousel",
+        "contents": [
+          {
+            "type": "bubble",
+            "hero": {
+              "type": "image",
+              "url": "https://via.placeholder.com/400x300/667eea/ffffff?text=Product+1",
+              "size": "full",
+              "aspectRatio": "4:3",
+              "aspectMode": "cover"
+            },
+            "body": {
+              "type": "box",
+              "layout": "vertical",
+              "contents": [
+                {
+                  "type": "text",
+                  "text": "精選商品 1",
+                  "weight": "bold",
+                  "size": "lg"
+                },
+                {
+                  "type": "text",
+                  "text": "NT$ 1,280",
+                  "size": "xl",
+                  "color": "#FF6B6B",
+                  "weight": "bold",
+                  "margin": "md"
+                }
+              ]
+            },
+            "footer": {
+              "type": "box",
+              "layout": "vertical",
+              "contents": [
+                {
+                  "type": "button",
+                  "action": {
+                    "type": "uri",
+                    "label": "查看詳情",
+                    "uri": "https://example.com/product1"
+                  },
+                  "style": "primary"
+                }
+              ]
+            }
+          },
+          {
+            "type": "bubble",
+            "hero": {
+              "type": "image",
+              "url": "https://via.placeholder.com/400x300/764ba2/ffffff?text=Product+2",
+              "size": "full",
+              "aspectRatio": "4:3",
+              "aspectMode": "cover"
+            },
+            "body": {
+              "type": "box",
+              "layout": "vertical",
+              "contents": [
+                {
+                  "type": "text",
+                  "text": "精選商品 2",
+                  "weight": "bold",
+                  "size": "lg"
+                },
+                {
+                  "type": "text",
+                  "text": "NT$ 1,580",
+                  "size": "xl",
+                  "color": "#FF6B6B",
+                  "weight": "bold",
+                  "margin": "md"
+                }
+              ]
+            },
+            "footer": {
+              "type": "box",
+              "layout": "vertical",
+              "contents": [
+                {
+                  "type": "button",
+                  "action": {
+                    "type": "uri",
+                    "label": "查看詳情",
+                    "uri": "https://example.com/product2"
+                  },
+                  "style": "primary"
+                }
+              ]
+            }
+          }
+        ]
+      }
+    }
+  ]
+}
+
+###
+
+### 測試 5：測試錯誤處理 - 缺少 userId
+POST https://script.google.com/macros/s/AKfycbyO2HmHaQu_vcRiemSbWlJ0ZvH2OnLizJoMu3lhTRyrcTasvuMAj1w5cd0ucL2RLyDSFw/exec
+Content-Type: application/json
+
+{
+  "messages": [
+    {
+      "type": "text",
+      "text": "這個請求應該會失敗，因為缺少 userId"
+    }
+  ]
+}
+
+###
+
+### 測試 6：測試錯誤處理 - 無效的 userId
+POST https://script.google.com/macros/s/AKfycbyO2HmHaQu_vcRiemSbWlJ0ZvH2OnLizJoMu3lhTRyrcTasvuMAj1w5cd0ucL2RLyDSFw/exec
+Content-Type: application/json
+
+{
+  "userId": "INVALID_USER_ID_12345",
+  "messages": [
+    {
+      "type": "text",
+      "text": "這個請求應該會失敗，因為 userId 無效"
+    }
+  ]
+}
+
+###
+
+### ===========================================
+### 如何取得 LINE User ID
+### ===========================================
+###
+### 方法 1：使用 LIFF
+### 在您的 LIFF 應用中，開啟瀏覽器開發者工具（F12），
+### 在 Console 中執行：
+###
+###   liff.init({ liffId: '2008576354-nwJ6w230' })
+###     .then(() => liff.getProfile())
+###     .then(profile => console.log('User ID:', profile.userId))
+###
+### 方法 2：使用 LINE Developers Console
+### 1. 前往 Messaging API 設定頁面
+### 2. 使用「Your user ID」區塊中顯示的 ID
+###
+### 方法 3：從 Webhook 事件取得
+### 查看 LINE Bot 收到的 Webhook 事件中的 userId
+###
+### ===========================================
+
+### 測試完成後檢查項目：
+### 
+### ✅ 測試 1（GET）應該返回 200 OK 和 HTML 頁面
+### ✅ 測試 2（文字訊息）應該返回 {"success": true}，LINE 收到文字訊息
+### ✅ 測試 3（單一 Flex）應該返回 {"success": true}，LINE 收到圖片卡片
+### ✅ 測試 4（輪播）應該返回 {"success": true}，LINE 收到可滑動的多個卡片
+### ❌ 測試 5（無 userId）應該返回 {"success": false, "error": "缺少必要參數..."}
+### ❌ 測試 6（無效 userId）應該返回 {"success": false, "error": "LINE API 錯誤..."}
+###
+### ===========================================
+
