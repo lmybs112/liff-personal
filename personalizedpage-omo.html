@@ -2627,6 +2627,11 @@
             <button id="liffLogoutBtn" class="liff-promo-btn" onclick="clearLiffAuth()" style="background: #FF6B6B; margin-top: 10px;">
               🔄 清除授權並重新登入
             </button>
+            
+            <!-- 臨時測試按鈕：發送簡單訊息 -->
+            <button id="liffTestBtn" class="liff-promo-btn" onclick="testSimpleMessage()" style="background: #FFA500; margin-top: 10px;">
+              🧪 測試發送簡單訊息
+            </button>
           </div>
           <!-- 浮動圖片 -->
           <img
@@ -7045,11 +7050,83 @@
         }
       }
 
+      // 測試發送簡單訊息（用於診斷）
+      async function testSimpleMessage() {
+        const btn = document.getElementById('liffTestBtn')
+        
+        if (btn.disabled) return
+        
+        btn.disabled = true
+        btn.textContent = '🔄 測試中...'
+        
+        try {
+          console.log('🧪 開始測試發送簡單訊息...')
+          
+          // 1. 初始化 LIFF
+          const initialized = await initLiff()
+          if (!initialized) {
+            throw new Error('LIFF 初始化失敗')
+          }
+          
+          // 2. 取得使用者資訊
+          const profile = await liff.getProfile()
+          const userId = profile.userId
+          console.log('✅ User ID:', userId)
+          console.log('✅ 顯示名稱:', profile.displayName)
+          
+          // 3. 測試 API - 發送簡單文字訊息
+          const apiEndpoint = 'https://script.google.com/macros/s/AKfycbyO2HmHaQu_vcRiemSbWlJ0ZvH2OnLizJoMu3lhTRyrcTasvuMAj1w5cd0ucL2RLyDSFw/exec'
+          
+          const testData = {
+            userId: userId,
+            messages: [
+              {
+                type: 'text',
+                text: '🧪 這是一則測試訊息\n\n如果您看到這則訊息，表示 API 運作正常！\n\n時間：' + new Date().toLocaleString('zh-TW')
+              }
+            ]
+          }
+          
+          console.log('📤 發送測試訊息:', testData)
+          
+          const response = await fetch(apiEndpoint, {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json'
+            },
+            body: JSON.stringify(testData)
+          })
+          
+          console.log('📨 API 回應狀態:', response.status, response.statusText)
+          
+          const responseText = await response.text()
+          console.log('📄 API 回應內容:', responseText)
+          
+          const result = JSON.parse(responseText)
+          
+          if (result.success) {
+            console.log('✅ 測試訊息發送成功！')
+            alert('✅ 測試成功！\n\n請檢查您的 LINE，應該會收到一則測試訊息。\n\nUser ID: ' + userId)
+          } else {
+            console.error('❌ API 回應失敗:', result.error)
+            alert('❌ 測試失敗：' + result.error + '\n\n請查看 Console 了解詳情')
+          }
+          
+        } catch (error) {
+          console.error('❌ 測試失敗:', error)
+          alert('❌ 測試失敗：' + error.message + '\n\n請查看 Console 了解詳情')
+        } finally {
+          btn.disabled = false
+          btn.textContent = '🧪 測試發送簡單訊息'
+        }
+      }
+
       // 將函數加到 window 對象供全域使用
       window.sendLiffPromoMessage = sendLiffPromoMessage
       window.initLiff = initLiff
       window.closeLiffAlert = closeLiffAlert
       window.clearLiffAuth = clearLiffAuth
+      window.testSimpleMessage = testSimpleMessage
 
       // 頁面載入時自動初始化 LIFF（可選）
       // window.addEventListener('DOMContentLoaded', () => {
