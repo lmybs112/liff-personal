@@ -6648,7 +6648,10 @@
 
       // 初始化 LIFF
       async function initLiff() {
-        if (liffInitialized) return true
+        if (liffInitialized) {
+          console.log('ℹ️ LIFF 已經初始化過了')
+          return true
+        }
         
         try {
           // 如果沒有設定 LIFF ID，嘗試從 URL 參數或環境變數取得
@@ -6658,16 +6661,36 @@
           }
 
           if (!liffId) {
-            console.warn('⚠️ 未設定 LIFF ID，請在 initLiff 函數中設定 liffId 變數')
+            console.error('❌ 未設定 LIFF ID')
+            console.error('請在代碼中設定 liffId 變數，或在 URL 中加上 ?liffId=YOUR_LIFF_ID')
             return false
           }
 
+          console.log('🔑 使用 LIFF ID:', liffId)
+          
           await liff.init({ liffId: liffId })
           liffInitialized = true
+          
           console.log('✅ LIFF 初始化成功')
+          console.log('📱 LIFF SDK 版本:', liff.getVersion())
+          console.log('🌐 執行環境:', liff.isInClient() ? 'LINE App' : '外部瀏覽器')
+          console.log('🔐 登入狀態:', liff.isLoggedIn() ? '已登入' : '未登入')
+          
           return true
         } catch (error) {
           console.error('❌ LIFF 初始化失敗:', error)
+          console.error('錯誤詳情:', {
+            name: error.name,
+            message: error.message,
+            code: error.code
+          })
+          
+          if (error.message.includes('404')) {
+            console.error('💡 提示：LIFF ID 可能不存在或未啟用')
+          } else if (error.message.includes('401')) {
+            console.error('💡 提示：LIFF ID 驗證失敗')
+          }
+          
           return false
         }
       }
@@ -6684,37 +6707,65 @@
         btn.classList.add('liff-promo-btn--loading')
 
         try {
+          console.log('🚀 開始發送優惠訊息...')
+          
           // 初始化 LIFF
+          console.log('1️⃣ 初始化 LIFF...')
           const initialized = await initLiff()
           if (!initialized) {
-            throw new Error('LIFF 初始化失敗')
+            throw new Error('LIFF 初始化失敗，請確認 LIFF ID 是否正確')
           }
+          console.log('✅ LIFF 初始化成功')
 
           // 檢查是否在 LINE 環境中
+          console.log('2️⃣ 檢查 LINE 環境...')
           if (!liff.isInClient()) {
-            alert('此功能僅在 LINE 應用程式中可用')
-            btn.disabled = false
-            btn.classList.remove('liff-promo-btn--loading')
-            return
+            console.warn('⚠️ 不在 LINE 應用程式中，但允許測試')
+            // 在開發環境下，允許繼續測試（移除 return）
+            // alert('此功能僅在 LINE 應用程式中可用')
+            // btn.disabled = false
+            // btn.classList.remove('liff-promo-btn--loading')
+            // return
           }
+          console.log('✅ 環境檢查通過')
 
           // 取得使用者資訊
+          console.log('3️⃣ 取得使用者資訊...')
           const profile = await liff.getProfile()
           const userId = profile.userId
           console.log('✅ 取得使用者 UID:', userId)
 
           // 取得優惠商品資料（從 sessionStorage 或 API）
+          console.log('4️⃣ 取得優惠商品資料...')
           const promoProducts = getPromoProducts()
+          console.log('✅ 商品資料:', promoProducts)
 
           // 發送 Flex Message
+          console.log('5️⃣ 發送 Flex Message 到 Google Apps Script...')
           await sendFlexMessage(userId, promoProducts)
 
           // 顯示成功訊息
+          console.log('✅ 全部完成！')
           showLiffSuccessAlert()
 
         } catch (error) {
           console.error('❌ 發送優惠訊息失敗:', error)
-          alert('發送失敗，請稍後再試')
+          console.error('❌ 錯誤詳情:', {
+            message: error.message,
+            stack: error.stack
+          })
+          
+          // 顯示更詳細的錯誤訊息
+          let errorMessage = '發送失敗：' + error.message
+          if (error.message.includes('LIFF')) {
+            errorMessage += '\n\n請確認 LIFF ID 是否正確'
+          } else if (error.message.includes('API') || error.message.includes('fetch')) {
+            errorMessage += '\n\n無法連接到伺服器，請檢查網路連線'
+          } else if (error.message.includes('LINE API')) {
+            errorMessage += '\n\n請確認 LINE Channel Access Token 是否有效'
+          }
+          
+          alert(errorMessage)
         } finally {
           // 恢復按鈕狀態
           btn.disabled = false
@@ -6758,44 +6809,65 @@
       async function sendFlexMessage(userId, products) {
         // 建立 Flex Message JSON
         const flexMessage = createFlexMessage(products)
+        console.log('📤 準備發送的 Flex Message:', flexMessage)
 
         // 發送到 Google Apps Script Web App
         // API 文檔：https://script.google.com/macros/s/AKfycbyO2HmHaQu_vcRiemSbWlJ0ZvH2OnLizJoMu3lhTRyrcTasvuMAj1w5cd0ucL2RLyDSFw/exec
         const apiEndpoint = 'https://script.google.com/macros/s/AKfycbyO2HmHaQu_vcRiemSbWlJ0ZvH2OnLizJoMu3lhTRyrcTasvuMAj1w5cd0ucL2RLyDSFw/exec'
         
+        console.log('📡 API 端點:', apiEndpoint)
+        console.log('👤 User ID:', userId)
+        
         try {
+          const requestBody = {
+            userId: userId,
+            messages: [flexMessage]
+          }
+          console.log('📦 請求內容:', requestBody)
+          
           const response = await fetch(apiEndpoint, {
             method: 'POST',
             headers: {
               'Content-Type': 'application/json'
             },
-            body: JSON.stringify({
-              userId: userId,
-              messages: [flexMessage]
-            })
+            body: JSON.stringify(requestBody)
           })
 
+          console.log('📨 回應狀態:', response.status, response.statusText)
+          
           // Google Apps Script 可能返回 text/plain，需要轉換
           const responseText = await response.text()
+          console.log('📄 回應內容:', responseText)
+          
           let result
 
           try {
             result = JSON.parse(responseText)
           } catch (e) {
             // 如果無法解析為 JSON，可能是錯誤訊息
-            throw new Error('回應格式錯誤: ' + responseText)
+            console.error('❌ JSON 解析失敗:', e)
+            throw new Error('API 回應格式錯誤: ' + responseText.substring(0, 100))
           }
 
           // 檢查 Google Apps Script 返回的成功狀態
           if (!result.success) {
-            throw new Error(result.error || '發送失敗')
+            console.error('❌ API 回應失敗:', result)
+            throw new Error('LINE API 錯誤: ' + (result.error || '發送失敗'))
           }
 
           console.log('✅ Flex Message 發送成功:', result)
           return result
         } catch (error) {
           console.error('❌ 發送 Flex Message 時發生錯誤:', error)
-          throw error
+          
+          // 提供更具體的錯誤訊息
+          if (error.message.includes('Failed to fetch')) {
+            throw new Error('網路連線失敗，無法連接到 Google Apps Script API')
+          } else if (error.message.includes('LINE API')) {
+            throw new Error(error.message)
+          } else {
+            throw new Error('發送失敗: ' + error.message)
+          }
         }
       }
 
