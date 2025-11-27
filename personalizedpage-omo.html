@@ -10,6 +10,8 @@
       href="https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@100;300;400;500;700;900&family=Figtree:wght@300;400;500;600;700;800;900&display=swap"
       rel="stylesheet"
     />
+    <!-- LIFF SDK -->
+    <script charset="utf-8" src="https://static.line-scdn.net/liff/edge/2/sdk.js"></script>
     <style>
       * {
         font-family: 'Noto Sans TC', 'sans-serif';
@@ -1987,9 +1989,84 @@
           color: #fff;
         }
 
-        .mail-section .mail-section__btn:disabled {
-          background-color: #0c8ce9;
-          color: #e0e0df;
+      .mail-section .mail-section__btn:disabled {
+        background-color: #0c8ce9;
+        color: #e0e0df;
+      }
+      }
+
+      /* LINE 優惠按鈕樣式 - 使用 LINE 主色系 */
+      .liff-promo-btn {
+        border: none;
+        display: flex;
+        padding: 12px 24px;
+        justify-content: center;
+        align-items: center;
+        gap: 8px;
+        border-radius: 40px;
+        background: #00C300;
+        color: #fff;
+        font-family: 'Noto Sans TC', Arial, sans-serif;
+        font-size: 17px;
+        font-style: normal;
+        font-weight: 500;
+        line-height: 22px;
+        letter-spacing: 0.34px;
+        cursor: pointer;
+        transition: all 0.3s ease;
+        min-width: 200px;
+        margin-top: 20px;
+      }
+
+      .liff-promo-btn:hover:not(:disabled) {
+        background: #00A000;
+        transform: translateY(-2px);
+        box-shadow: 0 4px 12px rgba(0, 195, 0, 0.3);
+      }
+
+      .liff-promo-btn:active:not(:disabled) {
+        transform: translateY(0);
+        box-shadow: 0 2px 6px rgba(0, 195, 0, 0.2);
+      }
+
+      .liff-promo-btn:disabled {
+        cursor: not-allowed;
+        background: #a0a0a0;
+        color: #e0e0df;
+        opacity: 0.6;
+      }
+
+      .liff-promo-btn--loading {
+        position: relative;
+        color: transparent;
+      }
+
+      .liff-promo-btn--loading::after {
+        content: '';
+        position: absolute;
+        width: 20px;
+        height: 20px;
+        top: 50%;
+        left: 50%;
+        margin-left: -10px;
+        margin-top: -10px;
+        border: 2px solid #fff;
+        border-top-color: transparent;
+        border-radius: 50%;
+        animation: liff-promo-spin 0.8s linear infinite;
+      }
+
+      @keyframes liff-promo-spin {
+        to {
+          transform: rotate(360deg);
+        }
+      }
+
+      @media screen and (min-width: 1240px) {
+        .liff-promo-btn {
+          font-size: 18px;
+          padding: 14px 28px;
+          min-width: 220px;
         }
       }
 
@@ -2538,6 +2615,10 @@
                 </div>
               </button>
             </div>
+
+            <button id="liffPromoBtn" class="liff-promo-btn" onclick="sendLiffPromoMessage()">
+              取得最新優惠資訊
+            </button>
           </div>
           <!-- 浮動圖片 -->
           <img
@@ -5757,6 +5838,20 @@
 </svg>
 `,
             message: '已複製折扣碼'
+          },
+          'liff-promo-success': {
+            style: {
+              background: 'rgba(0, 195, 0, 0.10)',
+              border: '1px solid rgba(0, 195, 0, 0.40)',
+              boxShadow:
+                '0px 71px 20px 0px rgba(0, 0, 0, 0.00), 0px 45px 18px 0px rgba(0, 0, 0, 0.01), 0px 25px 15px 0px rgba(0, 0, 0, 0.05), 0px 11px 11px 0px rgba(0, 0, 0, 0.09), 0px 3px 6px 0px rgba(0, 0, 0, 0.10)',
+              backdropFilter: 'blur(12px)',
+              color: '#00C300'
+            },
+            icon: `<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none">
+              <path d="M5 12L10 17L20 7" stroke="#00C300" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/>
+            </svg>`,
+            message: '優惠資訊已發送！請查看您的 LINE 訊息'
           }
         }
         const config = alertConfig[state] || alertConfig['send-email-error']
@@ -6543,6 +6638,315 @@
       
       // 加到 window 對象供全域使用
       window.startImageObserver = startImageObserver
+
+      // LIFF 初始化與優惠訊息發送功能
+      let liffId = '2008576354-nwJ6w230' // 請替換為您的 LIFF App ID
+      let liffInitialized = false
+
+      // 初始化 LIFF
+      async function initLiff() {
+        if (liffInitialized) return true
+        
+        try {
+          // 如果沒有設定 LIFF ID，嘗試從 URL 參數或環境變數取得
+          if (!liffId) {
+            const params = new URLSearchParams(window.location.search)
+            liffId = params.get('liffId') || null
+          }
+
+          if (!liffId) {
+            console.warn('⚠️ 未設定 LIFF ID，請在 initLiff 函數中設定 liffId 變數')
+            return false
+          }
+
+          await liff.init({ liffId: liffId })
+          liffInitialized = true
+          console.log('✅ LIFF 初始化成功')
+          return true
+        } catch (error) {
+          console.error('❌ LIFF 初始化失敗:', error)
+          return false
+        }
+      }
+
+      // 取得 LIFF 使用者 UID 並發送 Flex Message
+      async function sendLiffPromoMessage() {
+        const btn = document.getElementById('liffPromoBtn')
+        
+        // 防止重複點擊
+        if (btn.disabled) return
+        
+        // 設置載入狀態
+        btn.disabled = true
+        btn.classList.add('liff-promo-btn--loading')
+
+        try {
+          // 初始化 LIFF
+          const initialized = await initLiff()
+          if (!initialized) {
+            throw new Error('LIFF 初始化失敗')
+          }
+
+          // 檢查是否在 LINE 環境中
+          if (!liff.isInClient()) {
+            alert('此功能僅在 LINE 應用程式中可用')
+            btn.disabled = false
+            btn.classList.remove('liff-promo-btn--loading')
+            return
+          }
+
+          // 取得使用者資訊
+          const profile = await liff.getProfile()
+          const userId = profile.userId
+          console.log('✅ 取得使用者 UID:', userId)
+
+          // 取得優惠商品資料（從 sessionStorage 或 API）
+          const promoProducts = getPromoProducts()
+
+          // 發送 Flex Message
+          await sendFlexMessage(userId, promoProducts)
+
+          // 顯示成功訊息
+          showLiffSuccessAlert()
+
+        } catch (error) {
+          console.error('❌ 發送優惠訊息失敗:', error)
+          alert('發送失敗，請稍後再試')
+        } finally {
+          // 恢復按鈕狀態
+          btn.disabled = false
+          btn.classList.remove('liff-promo-btn--loading')
+        }
+      }
+
+      // 取得優惠商品資料
+      function getPromoProducts() {
+        // 嘗試從 sessionStorage 取得商品資料
+        const edmItems = JSON.parse(sessionStorage.getItem('inf-ai-edm-items') || '[]')
+        
+        // 如果沒有資料，使用預設商品
+        if (edmItems.length === 0) {
+          return [
+            {
+              name: '精選商品 1',
+              price: 'NT$ 1,280',
+              imageUrl: 'https://placehold.co/300x300',
+              link: '#'
+            },
+            {
+              name: '精選商品 2',
+              price: 'NT$ 1,580',
+              imageUrl: 'https://placehold.co/300x300',
+              link: '#'
+            }
+          ]
+        }
+
+        // 轉換為 Flex Message 格式
+        return edmItems.slice(0, 4).map(item => ({
+          name: item.name || item.title || '精選商品',
+          price: item.sale_price ? `NT$ ${item.sale_price}` : '價格請洽詢',
+          imageUrl: item.image_link || item.image || 'https://placehold.co/300x300',
+          link: item.link || item.url || '#'
+        }))
+      }
+
+      // 發送 Flex Message 到後端 API
+      async function sendFlexMessage(userId, products) {
+        // 建立 Flex Message JSON
+        const flexMessage = createFlexMessage(products)
+
+        // 發送到 Google Apps Script Web App
+        // API 文檔：https://script.google.com/macros/s/AKfycbyO2HmHaQu_vcRiemSbWlJ0ZvH2OnLizJoMu3lhTRyrcTasvuMAj1w5cd0ucL2RLyDSFw/exec
+        const apiEndpoint = 'https://script.google.com/macros/s/AKfycbyO2HmHaQu_vcRiemSbWlJ0ZvH2OnLizJoMu3lhTRyrcTasvuMAj1w5cd0ucL2RLyDSFw/exec'
+        
+        try {
+          const response = await fetch(apiEndpoint, {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({
+              userId: userId,
+              messages: [flexMessage]
+            })
+          })
+
+          // Google Apps Script 可能返回 text/plain，需要轉換
+          const responseText = await response.text()
+          let result
+
+          try {
+            result = JSON.parse(responseText)
+          } catch (e) {
+            // 如果無法解析為 JSON，可能是錯誤訊息
+            throw new Error('回應格式錯誤: ' + responseText)
+          }
+
+          // 檢查 Google Apps Script 返回的成功狀態
+          if (!result.success) {
+            throw new Error(result.error || '發送失敗')
+          }
+
+          console.log('✅ Flex Message 發送成功:', result)
+          return result
+        } catch (error) {
+          console.error('❌ 發送 Flex Message 時發生錯誤:', error)
+          throw error
+        }
+      }
+
+      // 建立 Flex Message JSON
+      function createFlexMessage(products) {
+        const bubbles = products.map(product => ({
+          type: 'bubble',
+          hero: {
+            type: 'image',
+            url: product.imageUrl,
+            size: 'full',
+            aspectRatio: '1:1',
+            aspectMode: 'cover'
+          },
+          body: {
+            type: 'box',
+            layout: 'vertical',
+            contents: [
+              {
+                type: 'text',
+                text: product.name,
+                weight: 'bold',
+                size: 'md',
+                wrap: true
+              },
+              {
+                type: 'text',
+                text: product.price,
+                size: 'xl',
+                color: '#00C300',
+                weight: 'bold',
+                margin: 'md'
+              }
+            ]
+          },
+          footer: {
+            type: 'box',
+            layout: 'vertical',
+            spacing: 'sm',
+            contents: [
+              {
+                type: 'button',
+                style: 'primary',
+                height: 'sm',
+                action: {
+                  type: 'uri',
+                  label: '查看商品',
+                  uri: product.link
+                },
+                color: '#00C300'
+              }
+            ]
+          }
+        }))
+
+        return {
+          type: 'flex',
+          altText: '最新優惠商品資訊',
+          contents: {
+            type: 'carousel',
+            contents: bubbles
+          }
+        }
+      }
+
+      // 顯示成功提示
+      function showLiffSuccessAlert() {
+        // 使用現有的 showSendAlert 函數
+        if (typeof showSendAlert === 'function') {
+          // 暫時保存原始函數行為，但針對 LIFF 成功訊息不影響郵件按鈕
+          const originalShowSendAlert = showSendAlert
+          
+          // 建立自訂的 alert 顯示邏輯（不影響郵件按鈕）
+          const alert = document.getElementById('sendAlert')
+          if (!alert) {
+            alert('優惠資訊已發送！請查看您的 LINE 訊息')
+            return
+          }
+
+          const alertConfig = {
+            'liff-promo-success': {
+              style: {
+                background: 'rgba(0, 195, 0, 0.10)',
+                border: '1px solid rgba(0, 195, 0, 0.40)',
+                boxShadow:
+                  '0px 71px 20px 0px rgba(0, 0, 0, 0.00), 0px 45px 18px 0px rgba(0, 0, 0, 0.01), 0px 25px 15px 0px rgba(0, 0, 0, 0.05), 0px 11px 11px 0px rgba(0, 0, 0, 0.09), 0px 3px 6px 0px rgba(0, 0, 0, 0.10)',
+                backdropFilter: 'blur(12px)',
+                color: '#00C300'
+              },
+              icon: `<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none">
+                <path d="M5 12L10 17L20 7" stroke="#00C300" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/>
+              </svg>`,
+              message: '優惠資訊已發送！請查看您的 LINE 訊息'
+            }
+          }
+
+          const config = alertConfig['liff-promo-success']
+          
+          // 更新彈窗內容
+          alert.innerHTML = `
+            ${config.icon}
+            <div>${config.message}</div>
+            <span class="close-send-alert" onclick="closeLiffAlert()">
+              <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none">
+                <g clip-path="url(#clip0_5970_16761)">
+                  <path d="M12 24C15.1826 24 18.2348 22.7357 20.4853 20.4853C22.7357 18.2348 24 15.1826 24 12C24 8.8174 22.7357 5.76516 20.4853 3.51472C18.2348 1.26428 15.1826 0 12 0C8.8174 0 5.76516 1.26428 3.51472 3.51472C1.26428 5.76516 0 8.8174 0 12C0 15.1826 1.26428 18.2348 3.51472 20.4853C5.76516 22.7357 8.8174 24 12 24ZM8.20312 8.20312C8.64375 7.7625 9.35625 7.7625 9.79219 8.20312L11.9953 10.4062L14.1984 8.20312C14.6391 7.7625 15.3516 7.7625 15.7875 8.20312C16.2234 8.64375 16.2281 9.35625 15.7875 9.79219L13.5844 11.9953L15.7875 14.1984C16.2281 14.6391 16.2281 15.3516 15.7875 15.7875C15.3469 16.2234 14.6344 16.2281 14.1984 15.7875L11.9953 13.5844L9.79219 15.7875C9.35156 16.2281 8.63906 16.2281 8.20312 15.7875C7.76719 15.3469 7.7625 14.6344 8.20312 14.1984L10.4062 11.9953L8.20312 9.79219C7.7625 9.35156 7.7625 8.63906 8.20312 8.20312Z" fill="black" fill-opacity="0.16"/>
+                </g>
+                <defs>
+                  <clipPath id="clip0_5970_16761">
+                    <rect width="24" height="24" fill="white" />
+                  </clipPath>
+                </defs>
+              </svg>
+            </span>
+          `
+
+          // 套用樣式
+          Object.assign(alert.style, config.style)
+
+          // 顯示動畫
+          alert.classList.remove('hiding')
+          alert.style.display = 'flex'
+          alert.classList.add('showing')
+        } else {
+          alert('優惠資訊已發送！請查看您的 LINE 訊息')
+        }
+      }
+
+      // 關閉 LIFF 提示
+      function closeLiffAlert() {
+        const alert = document.getElementById('sendAlert')
+        if (!alert) return
+        
+        alert.classList.remove('showing')
+        alert.classList.add('hiding')
+        alert.addEventListener(
+          'animationend',
+          () => {
+            alert.style.display = 'none'
+            alert.classList.remove('hiding')
+          },
+          { once: true }
+        )
+      }
+
+      // 將函數加到 window 對象供全域使用
+      window.sendLiffPromoMessage = sendLiffPromoMessage
+      window.initLiff = initLiff
+      window.closeLiffAlert = closeLiffAlert
+
+      // 頁面載入時自動初始化 LIFF（可選）
+      // window.addEventListener('DOMContentLoaded', () => {
+      //   initLiff()
+      // })
     </script>
   </body>
 </html>

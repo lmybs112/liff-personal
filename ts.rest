@@ -1,0 +1,105 @@
+# ========================================
+# LINE Flex Message API 測試
+# ========================================
+
+### 測試 API 狀態（GET 請求）
+GET https://script.google.com/macros/s/AKfycbyO2HmHaQu_vcRiemSbWlJ0ZvH2OnLizJoMu3lhTRyrcTasvuMAj1w5cd0ucL2RLyDSFw/exec
+
+###
+
+### 發送簡單文字訊息
+POST https://script.google.com/macros/s/AKfycbyO2HmHaQu_vcRiemSbWlJ0ZvH2OnLizJoMu3lhTRyrcTasvuMAj1w5cd0ucL2RLyDSFw/exec
+Content-Type: application/json
+
+{
+  "userId": "YOUR_LINE_USER_ID",
+  "messages": [
+    {
+      "type": "text",
+      "text": "測試訊息：API 運作正常！"
+    }
+  ]
+}
+
+###
+
+### 發送 Flex Message（簡單範例）
+POST https://script.google.com/macros/s/AKfycbyO2HmHaQu_vcRiemSbWlJ0ZvH2OnLizJoMu3lhTRyrcTasvuMAj1w5cd0ucL2RLyDSFw/exec
+Content-Type: application/json
+
+{
+  "userId": "YOUR_LINE_USER_ID",
+  "messages": [
+    {
+      "type": "flex",
+      "altText": "測試優惠券",
+      "contents": {
+        "type": "bubble",
+        "body": {
+          "type": "box",
+          "layout": "vertical",
+          "contents": [
+            {
+              "type": "text",
+              "text": "優惠券",
+              "weight": "bold",
+              "size": "xl",
+              "color": "#1E40AF"
+            },
+            {
+              "type": "text",
+              "text": "全館 9 折優惠",
+              "size": "lg",
+              "margin": "md"
+            },
+            {
+              "type": "text",
+              "text": "有效期限：2025/12/31",
+              "size": "sm",
+              "color": "#999999",
+              "margin": "md"
+            }
+          ]
+        },
+        "footer": {
+          "type": "box",
+          "layout": "vertical",
+          "contents": [
+            {
+              "type": "button",
+              "action": {
+                "type": "uri",
+                "label": "立即使用",
+                "uri": "https://example.com"
+              },
+              "style": "primary",
+              "color": "#1E40AF"
+            }
+          ]
+        }
+      }
+    }
+  ]
+}
+
+###
+
+# ========================================
+# 產品推薦 API 測試
+# ========================================
+
+### 取得推薦產品
+POST https://api.inffits.com/HTTP_pidinfo_cdp_product_recommendation/extension/recom_product
+Content-Type: application/json
+
+{
+    "Brand": "CLARKS",
+    "LGVID": "x",
+    "MRID": "",
+    "recom_num": "6",
+    "PID": "10662339",
+    "SP_PID": "xxSOCIAL PROOF",
+    "SIZEAI_ptr": "bhv"
+}
+
+###
