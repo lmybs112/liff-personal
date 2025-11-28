@@ -1777,7 +1777,7 @@
         flex-direction: column;
         align-items: center;
         width: 100%;
-        min-height: 100vh;
+        height: 100%;
         padding: 100px 24px;
       }
 
@@ -1938,7 +1938,7 @@
 
       @media screen and (min-width: 1240px) {
         .mail-section {
-          overflow: visible;
+          overflow: hidden;
           padding: 155px 80px 140px 80px;
           background: rgba(0, 0, 0, 0.95);
         }
@@ -2622,55 +2622,13 @@
             <button id="liffPromoBtn" class="liff-promo-btn" onclick="sendLiffPromoMessage()">
               取得最新優惠資訊
             </button>
-            
-            <!-- LINE User ID 顯示區域 -->
-            <div id="userIdDisplay" style="display: none; margin-top: 20px; padding: 15px; background: #f9fafb; border-radius: 12px; border: 2px solid #e5e7eb;">
-              <div style="font-size: 14px; color: #666; margin-bottom: 8px; font-weight: 600;">
-                👤 您的 LINE User ID：
-              </div>
-              <div style="display: flex; align-items: center; gap: 10px;">
-                <div id="userIdValue" style="flex: 1; font-family: 'Monaco', 'Courier New', monospace; font-size: 13px; color: #1E40AF; background: white; padding: 10px; border-radius: 8px; word-break: break-all; line-height: 1.5;">
-                  載入中...
-                </div>
-                <button id="copyUserIdBtn" onclick="copyUserId()" style="padding: 10px 16px; background: #1E40AF; color: white; border: none; border-radius: 8px; cursor: pointer; font-size: 14px; white-space: nowrap; min-width: 60px;">
-                  📋 複製
-                </button>
-              </div>
-              <div id="userNameDisplay" style="margin-top: 8px; font-size: 13px; color: #666;">
-              </div>
-            </div>
-            
-            <!-- 錯誤訊息顯示區域 -->
-            <div id="errorDisplay" style="display: none; margin-top: 15px; padding: 15px; background: #FEE2E2; border-radius: 12px; border: 2px solid #FCA5A5;">
-              <div style="font-size: 14px; color: #991B1B; margin-bottom: 8px; font-weight: 600;">
-                ❌ 錯誤訊息
-              </div>
-              <div id="errorMessage" style="font-size: 13px; color: #7F1D1D; line-height: 1.6; white-space: pre-wrap;">
-              </div>
-              <button onclick="document.getElementById('errorDisplay').style.display='none'" style="margin-top: 10px; padding: 8px 16px; background: #DC2626; color: white; border: none; border-radius: 8px; cursor: pointer; font-size: 13px;">
-                關閉
-              </button>
-            </div>
-            
-            <!-- 成功訊息顯示區域 -->
-            <div id="successDisplay" style="display: none; margin-top: 15px; padding: 15px; background: #D1FAE5; border-radius: 12px; border: 2px solid #6EE7B7;">
-              <div style="font-size: 14px; color: #065F46; margin-bottom: 8px; font-weight: 600;">
-                ✅ 發送成功！
-              </div>
-              <div id="successMessage" style="font-size: 13px; color: #047857; line-height: 1.6;">
-                訊息已成功發送到您的 LINE
-              </div>
-              <button onclick="document.getElementById('successDisplay').style.display='none'" style="margin-top: 10px; padding: 8px 16px; background: #10B981; color: white; border: none; border-radius: 8px; cursor: pointer; font-size: 13px;">
-                關閉
-              </button>
-            </div>
           </div>
           <!-- 浮動圖片 -->
           <img
             loading="lazy"
             src="https://placehold.co/160x160"
             style="
-              width: 11.11vw;
+        width: 11.11vw;
               height: 11.11vw;
               left: 22.08vw;
               top: -4.6vw;
@@ -6740,13 +6698,6 @@
       // 取得 LIFF 使用者 UID 並發送 Flex Message
       async function sendLiffPromoMessage() {
         const btn = document.getElementById('liffPromoBtn')
-        const errorDisplay = document.getElementById('errorDisplay')
-        const errorMessage = document.getElementById('errorMessage')
-        const successDisplay = document.getElementById('successDisplay')
-        
-        // 隱藏之前的訊息
-        errorDisplay.style.display = 'none'
-        successDisplay.style.display = 'none'
         
         // 防止重複點擊
         if (btn.disabled) return
@@ -6770,11 +6721,10 @@
           // 檢查登入狀態
           if (!liff.isLoggedIn()) {
             console.log('⚠️ 未登入，開始登入流程...')
-            errorMessage.textContent = '需要登入 LINE 帳號\n\n頁面即將跳轉到登入頁面...'
-            errorDisplay.style.display = 'block'
-            setTimeout(() => {
-              liff.login()
-            }, 1500)
+            // 設置標記，登入後自動發送
+            localStorage.setItem('liff_auto_send_promo', 'true')
+            btn.textContent = '登入中...'
+            liff.login()
             return
           }
 
@@ -6797,97 +6747,22 @@
           // 發送訊息
           await sendFlexMessage(userId, promoProducts)
 
+          // 清除自動發送標記
+          localStorage.removeItem('liff_auto_send_promo')
+
           // 顯示成功訊息
           console.log('🎉 全部完成！')
-          successDisplay.style.display = 'block'
+          alert('✅ 優惠訊息已發送到您的 LINE！')
           
         } catch (error) {
           console.error('❌ 發送失敗:', error)
           console.error('❌ 錯誤堆疊:', error.stack)
           
-          // 詳細的錯誤訊息
-          let detailedMessage = ''
+          // 清除自動發送標記
+          localStorage.removeItem('liff_auto_send_promo')
           
-          if (error.message.includes('permission') || error.message.includes('scope')) {
-            detailedMessage = `🚫 權限不足
-
-❌ 錯誤：${error.message}
-
-📋 解決步驟：
-1. 前往 LINE Developers Console
-2. 選擇您的 Channel → LIFF
-3. 編輯 LIFF App (ID: 2008576354-nwJ6w230)
-4. 在 Scopes 勾選：
-   ☑️ profile
-   ☑️ openid
-5. 點擊「Update」儲存
-6. 在 LINE 中：設定 → 隱私設定 → 已授權的應用程式
-7. 移除此 LIFF App
-8. 重新開啟並授權
-
-⚠️ 這是最常見的問題！請務必完成上述步驟。`
-          } else if (error.message.includes('Failed to fetch') || error.message.includes('Load failed') || error.message.includes('網路') || error.message.includes('超時')) {
-            detailedMessage = `🌐 網路連線問題
-
-❌ 錯誤：${error.message}
-
-💡 但是 API 測試成功了！
-這表示 API 本身沒問題，可能是：
-
-可能原因：
-1. 手機網路不穩定
-2. LIFF 應用無法連接到 Google Apps Script
-3. 請求超時（15秒）
-
-🔧 解決方式：
-1. 檢查手機網路連線
-2. 嘗試切換 WiFi/4G
-3. 重新載入頁面
-4. 稍後再試
-
-📊 API 測試結果：✅ 成功
-📱 LIFF 發送結果：❌ 失敗
-
-這很可能是暫時性的網路問題。`
-          } else if (error.message.includes('401') || error.message.includes('Unauthorized')) {
-            detailedMessage = `🔐 認證失敗
-
-❌ 錯誤：${error.message}
-
-奇怪！API 測試明明成功了，但 LIFF 發送失敗...
-
-可能原因：
-1. LINE Channel Access Token 在測試後被重新簽發
-2. Token 權限設定不正確
-
-🔧 解決方式：
-1. 確認 Google Apps Script 中的 Token 是最新的
-2. 重新部署 Google Apps Script
-3. 再試一次`
-          } else {
-            detailedMessage = `❌ 發送失敗
-
-錯誤訊息：${error.message}
-
-📊 診斷資訊：
-• API 測試：✅ 成功
-• LIFF 初始化：${liffInitialized ? '✅ 成功' : '❌ 失敗'}
-• 登入狀態：${liff.isLoggedIn() ? '✅ 已登入' : '❌ 未登入'}
-• 環境：${liff.isInClient() ? 'LINE App' : '外部瀏覽器'}
-
-🔧 建議：
-1. 重新整理頁面
-2. 檢查上方顯示的 User ID 是否正確
-3. 確認 LIFF Scopes 設定正確
-
-完整錯誤：${error.stack || error.toString()}`
-          }
-          
-          errorMessage.textContent = detailedMessage
-          errorDisplay.style.display = 'block'
-          
-          // 滾動到錯誤訊息
-          errorDisplay.scrollIntoView({ behavior: 'smooth', block: 'nearest' })
+          // 顯示錯誤訊息
+          alert('❌ 發送失敗：' + error.message + '\n\n請查看控制台了解詳情')
           
         } finally {
           // 恢復按鈕狀態
@@ -7297,132 +7172,39 @@
           btn.textContent = '🧪 測試發送簡單訊息'
         }
       }
-
-      // 自動顯示 User ID
-      async function displayUserId() {
-        const displayDiv = document.getElementById('userIdDisplay')
-        const userIdValue = document.getElementById('userIdValue')
-        const userNameDisplay = document.getElementById('userNameDisplay')
-        
-        try {
-          console.log('🔑 開始取得 User ID...')
-          
-          // 初始化 LIFF
-          const initialized = await initLiff()
-          if (!initialized) {
-            userIdValue.textContent = '⚠️ LIFF 初始化失敗'
-            userIdValue.style.color = '#FF6B6B'
-            displayDiv.style.display = 'block'
-            return
-          }
-          
-          // 檢查登入狀態
-          if (!liff.isLoggedIn()) {
-            userIdValue.textContent = '⚠️ 未登入 LINE'
-            userIdValue.style.color = '#FF6B6B'
-            displayDiv.style.display = 'block'
-            return
-          }
-          
-          // 取得使用者資訊
-          const profile = await liff.getProfile()
-          userIdValue.textContent = profile.userId
-          userIdValue.style.color = '#1E40AF'
-          
-          // 顯示使用者名稱
-          userNameDisplay.innerHTML = `<strong>名稱：</strong>${profile.displayName || '未知'}`
-          
-          // 顯示區域
-          displayDiv.style.display = 'block'
-          
-          console.log('✅ User ID 已顯示:', profile.userId)
-          
-        } catch (error) {
-          console.error('❌ 取得 User ID 失敗:', error)
-          userIdValue.textContent = '❌ 取得失敗: ' + error.message
-          userIdValue.style.color = '#FF6B6B'
-          displayDiv.style.display = 'block'
-        }
-      }
-      
-      // 複製 User ID
-      function copyUserId() {
-        const userIdValue = document.getElementById('userIdValue').textContent
-        const copyBtn = document.getElementById('copyUserIdBtn')
-        
-        if (userIdValue.includes('載入中') || userIdValue.includes('失敗') || userIdValue.includes('⚠️') || userIdValue.includes('❌')) {
-          alert('沒有可複製的 User ID')
-          return
-        }
-        
-        // 複製到剪貼簿
-        if (navigator.clipboard && navigator.clipboard.writeText) {
-          navigator.clipboard.writeText(userIdValue)
-            .then(() => {
-              // 顯示成功提示
-              const originalText = copyBtn.textContent
-              copyBtn.textContent = '✅ 已複製'
-              copyBtn.style.background = '#10b981'
-              
-              setTimeout(() => {
-                copyBtn.textContent = originalText
-                copyBtn.style.background = '#1E40AF'
-              }, 2000)
-            })
-            .catch(err => {
-              console.error('複製失敗:', err)
-              alert('複製失敗，請手動複製：\n' + userIdValue)
-            })
-        } else {
-          // 回退方案：使用 textarea
-          const textarea = document.createElement('textarea')
-          textarea.value = userIdValue
-          textarea.style.position = 'fixed'
-          textarea.style.opacity = '0'
-          document.body.appendChild(textarea)
-          textarea.select()
-          
-          try {
-            document.execCommand('copy')
-            const originalText = copyBtn.textContent
-            copyBtn.textContent = '✅ 已複製'
-            copyBtn.style.background = '#10b981'
-            
-            setTimeout(() => {
-              copyBtn.textContent = originalText
-              copyBtn.style.background = '#1E40AF'
-            }, 2000)
-          } catch (err) {
-            console.error('複製失敗:', err)
-            alert('複製失敗，請手動複製：\n' + userIdValue)
-          }
-          
-          document.body.removeChild(textarea)
-        }
-      }
-
       // 將函數加到 window 對象供全域使用
       window.sendLiffPromoMessage = sendLiffPromoMessage
       window.initLiff = initLiff
       window.closeLiffAlert = closeLiffAlert
       window.clearLiffAuth = clearLiffAuth
       window.testSimpleMessage = testSimpleMessage
-      window.displayUserId = displayUserId
-      window.copyUserId = copyUserId
       
-      // 頁面載入時自動顯示 User ID
-      window.addEventListener('DOMContentLoaded', () => {
-        console.log('📄 頁面載入完成，準備取得 User ID...')
-        // 延遲 500ms 讓 LIFF SDK 完全載入
-        setTimeout(() => {
-          displayUserId()
-        }, 500)
+      // 頁面載入時檢查是否需要自動發送
+      window.addEventListener('DOMContentLoaded', async () => {
+        console.log('📄 頁面載入完成')
+        
+        // 檢查是否有自動發送標記
+        const shouldAutoSend = localStorage.getItem('liff_auto_send_promo')
+        
+        if (shouldAutoSend === 'true') {
+          console.log('🔄 檢測到自動發送標記，準備發送訊息...')
+          
+          // 延遲一下讓頁面完全載入
+          setTimeout(async () => {
+            // 初始化 LIFF
+            const initialized = await initLiff()
+            
+            if (initialized && liff.isLoggedIn()) {
+              console.log('✅ 已登入，自動執行發送...')
+              // 自動點擊按鈕觸發發送
+              sendLiffPromoMessage()
+            } else {
+              console.log('⚠️ 未登入或初始化失敗，清除標記')
+              localStorage.removeItem('liff_auto_send_promo')
+            }
+          }, 1000)
+        }
       })
-
-      // 頁面載入時自動初始化 LIFF（可選）
-      // window.addEventListener('DOMContentLoaded', () => {
-      //   initLiff()
-      // })
     </script>
   </body>
 </html>

@@ -103,3 +103,609 @@ Content-Type: application/json
 }
 
 ###
+POST  https://fe4ii8q2z8.execute-api.ap-northeast-1.amazonaws.com/model
+Content-Type: application/json
+
+
+{
+  "userId": "Ud4fd1b67ee7dc773d1ad943fdf036f90",
+  "messages": [
+    {
+      "type": "flex",
+      "altText": "最新優惠商品資訊",
+      "contents": {
+        "type": "carousel",
+        "contents": [
+          {
+            "type": "bubble",
+            "hero": {
+              "type": "image",
+              "url": "https://diz36nn4q02zr.cloudfront.net/webapi/imagesV3/Cropped/SalePage/10100033/0/638991726189370000?v=1",
+              "size": "full",
+              "aspectRatio": "1:1",
+              "aspectMode": "cover"
+            },
+            "body": {
+              "type": "box",
+              "layout": "vertical",
+              "contents": [
+                {
+                  "type": "text",
+                  "text": "時尚透膚涼感養脂®內衣（立體杯） - 黑【R86091】",
+                  "weight": "bold",
+                  "size": "md",
+                  "wrap": true
+                },
+                {
+                  "type": "text",
+                  "text": "NT$ 1,380",
+                  "size": "xl",
+                  "color": "#00C300",
+                  "weight": "bold",
+                  "margin": "md"
+                }
+              ]
+            },
+            "footer": {
+              "type": "box",
+              "layout": "vertical",
+              "spacing": "sm",
+              "contents": [
+                {
+                  "type": "button",
+                  "style": "primary",
+                  "height": "sm",
+                  "action": {
+                    "type": "uri",
+                    "label": "查看商品",
+                    "uri": "https://www.dailybelle.com.tw/SalePage/Index/10100033"
+                  },
+                  "color": "#00C300"
+                }
+              ]
+            }
+          },
+          {
+            "type": "bubble",
+            "hero": {
+              "type": "image",
+              "url": "https://diz36nn4q02zr.cloudfront.net/webapi/imagesV3/Cropped/SalePage/10349990/0/638991727262000000?v=1",
+              "size": "full",
+              "aspectRatio": "1:1",
+              "aspectMode": "cover"
+            },
+            "body": {
+              "type": "box",
+              "layout": "vertical",
+              "contents": [
+                {
+                  "type": "text",
+                  "text": "美形機能運動內衣 - 磚紅【Z10031】",
+                  "weight": "bold",
+                  "size": "md",
+                  "wrap": true
+                },
+                {
+                  "type": "text",
+                  "text": "NT$ 2,380",
+                  "size": "xl",
+                  "color": "#00C300",
+                  "weight": "bold",
+                  "margin": "md"
+                }
+              ]
+            },
+            "footer": {
+              "type": "box",
+              "layout": "vertical",
+              "spacing": "sm",
+              "contents": [
+                {
+                  "type": "button",
+                  "style": "primary",
+                  "height": "sm",
+                  "action": {
+                    "type": "uri",
+                    "label": "查看商品",
+                    "uri": "https://www.dailybelle.com.tw/SalePage/Index/10349990"
+                  },
+                  "color": "#00C300"
+                }
+              ]
+            }
+          },
+          {
+            "type": "bubble",
+            "hero": {
+              "type": "image",
+              "url": "https://diz36nn4q02zr.cloudfront.net/webapi/imagesV3/Cropped/SalePage/10823303/0/638948133709200000?v=1",
+              "size": "full",
+              "aspectRatio": "1:1",
+              "aspectMode": "cover"
+            },
+            "body": {
+              "type": "box",
+              "layout": "vertical",
+              "contents": [
+                {
+                  "type": "text",
+                  "text": "榛果暖曦養脂®內衣（薄軟杯）－可可【R8657】",
+                  "weight": "bold",
+                  "size": "md",
+                  "wrap": true
+                },
+                {
+                  "type": "text",
+                  "text": "NT$ 2,380",
+                  "size": "xl",
+                  "color": "#00C300",
+                  "weight": "bold",
+                  "margin": "md"
+                }
+              ]
+            },
+            "footer": {
+              "type": "box",
+              "layout": "vertical",
+              "spacing": "sm",
+              "contents": [
+                {
+                  "type": "button",
+                  "style": "primary",
+                  "height": "sm",
+                  "action": {
+                    "type": "uri",
+                    "label": "查看商品",
+                    "uri": "https://www.dailybelle.com.tw/SalePage/Index/10823303"
+                  },
+                  "color": "#00C300"
+                }
+              ]
+            }
+          },
+          {
+            "type": "bubble",
+            "hero": {
+              "type": "image",
+              "url": "https://diz36nn4q02zr.cloudfront.net/webapi/imagesV3/Cropped/SalePage/10691546/0/638974917899530000?v=1",
+              "size": "full",
+              "aspectRatio": "1:1",
+              "aspectMode": "cover"
+            },
+            "body": {
+              "type": "box",
+              "layout": "vertical",
+              "contents": [
+                {
+                  "type": "text",
+                  "text": "LIFTY · 雲感輕養脂內衣（立體杯）－藍【R86611】",
+                  "weight": "bold",
+                  "size": "md",
+                  "wrap": true
+                },
+                {
+                  "type": "text",
+                  "text": "NT$ 1,980",
+                  "size": "xl",
+                  "color": "#00C300",
+                  "weight": "bold",
+                  "margin": "md"
+                }
+              ]
+            },
+            "footer": {
+              "type": "box",
+              "layout": "vertical",
+              "spacing": "sm",
+              "contents": [
+                {
+                  "type": "button",
+                  "style": "primary",
+                  "height": "sm",
+                  "action": {
+                    "type": "uri",
+                    "label": "查看商品",
+                    "uri": "https://www.dailybelle.com.tw/SalePage/Index/10691546"
+                  },
+                  "color": "#00C300"
+                }
+              ]
+            }
+          },
+          {
+            "type": "bubble",
+            "hero": {
+              "type": "image",
+              "url": "https://diz36nn4q02zr.cloudfront.net/webapi/imagesV3/Cropped/SalePage/6560423/0/638926960009130000?v=1",
+              "size": "full",
+              "aspectRatio": "1:1",
+              "aspectMode": "cover"
+            },
+            "body": {
+              "type": "box",
+              "layout": "vertical",
+              "contents": [
+                {
+                  "type": "text",
+                  "text": "媚惑蕾絲美背機能型內衣 (薄軟杯) -【60492】",
+                  "weight": "bold",
+                  "size": "md",
+                  "wrap": true
+                },
+                {
+                  "type": "text",
+                  "text": "NT$ 1,080",
+                  "size": "xl",
+                  "color": "#00C300",
+                  "weight": "bold",
+                  "margin": "md"
+                }
+              ]
+            },
+            "footer": {
+              "type": "box",
+              "layout": "vertical",
+              "spacing": "sm",
+              "contents": [
+                {
+                  "type": "button",
+                  "style": "primary",
+                  "height": "sm",
+                  "action": {
+                    "type": "uri",
+                    "label": "查看商品",
+                    "uri": "https://www.dailybelle.com.tw/SalePage/Index/6560423"
+                  },
+                  "color": "#00C300"
+                }
+              ]
+            }
+          },
+          {
+            "type": "bubble",
+            "hero": {
+              "type": "image",
+              "url": "https://diz36nn4q02zr.cloudfront.net/webapi/imagesV3/Cropped/SalePage/10139167/0/638991726862900000?v=1",
+              "size": "full",
+              "aspectRatio": "1:1",
+              "aspectMode": "cover"
+            },
+            "body": {
+              "type": "box",
+              "layout": "vertical",
+              "contents": [
+                {
+                  "type": "text",
+                  "text": "素面無痕養脂®內衣（薄軟杯）－灰【R8617】",
+                  "weight": "bold",
+                  "size": "md",
+                  "wrap": true
+                },
+                {
+                  "type": "text",
+                  "text": "NT$ 2,380",
+                  "size": "xl",
+                  "color": "#00C300",
+                  "weight": "bold",
+                  "margin": "md"
+                }
+              ]
+            },
+            "footer": {
+              "type": "box",
+              "layout": "vertical",
+              "spacing": "sm",
+              "contents": [
+                {
+                  "type": "button",
+                  "style": "primary",
+                  "height": "sm",
+                  "action": {
+                    "type": "uri",
+                    "label": "查看商品",
+                    "uri": "https://www.dailybelle.com.tw/SalePage/Index/10139167"
+                  },
+                  "color": "#00C300"
+                }
+              ]
+            }
+          },
+          {
+            "type": "bubble",
+            "hero": {
+              "type": "image",
+              "url": "https://diz36nn4q02zr.cloudfront.net/webapi/imagesV3/Cropped/SalePage/268486/0/638975279311530000?v=1",
+              "size": "full",
+              "aspectRatio": "1:1",
+              "aspectMode": "cover"
+            },
+            "body": {
+              "type": "box",
+              "layout": "vertical",
+              "contents": [
+                {
+                  "type": "text",
+                  "text": "魔力推推脂‧重機能強效集中涼感560丹調整型內衣 -【R8101】",
+                  "weight": "bold",
+                  "size": "md",
+                  "wrap": true
+                },
+                {
+                  "type": "text",
+                  "text": "NT$ 1,380",
+                  "size": "xl",
+                  "color": "#00C300",
+                  "weight": "bold",
+                  "margin": "md"
+                }
+              ]
+            },
+            "footer": {
+              "type": "box",
+              "layout": "vertical",
+              "spacing": "sm",
+              "contents": [
+                {
+                  "type": "button",
+                  "style": "primary",
+                  "height": "sm",
+                  "action": {
+                    "type": "uri",
+                    "label": "查看商品",
+                    "uri": "https://www.dailybelle.com.tw/SalePage/Index/268486"
+                  },
+                  "color": "#00C300"
+                }
+              ]
+            }
+          },
+          {
+            "type": "bubble",
+            "hero": {
+              "type": "image",
+              "url": "https://diz36nn4q02zr.cloudfront.net/webapi/imagesV3/Cropped/SalePage/1899119/0/638944242750270000?v=1",
+              "size": "full",
+              "aspectRatio": "1:1",
+              "aspectMode": "cover"
+            },
+            "body": {
+              "type": "box",
+              "layout": "vertical",
+              "contents": [
+                {
+                  "type": "text",
+                  "text": "涼感布輕巧蕾絲集中型內衣_全罩杯 -【81022】",
+                  "weight": "bold",
+                  "size": "md",
+                  "wrap": true
+                },
+                {
+                  "type": "text",
+                  "text": "NT$ 1,380",
+                  "size": "xl",
+                  "color": "#00C300",
+                  "weight": "bold",
+                  "margin": "md"
+                }
+              ]
+            },
+            "footer": {
+              "type": "box",
+              "layout": "vertical",
+              "spacing": "sm",
+              "contents": [
+                {
+                  "type": "button",
+                  "style": "primary",
+                  "height": "sm",
+                  "action": {
+                    "type": "uri",
+                    "label": "查看商品",
+                    "uri": "https://www.dailybelle.com.tw/SalePage/Index/1899119"
+                  },
+                  "color": "#00C300"
+                }
+              ]
+            }
+          },
+          {
+            "type": "bubble",
+            "hero": {
+              "type": "image",
+              "url": "https://diz36nn4q02zr.cloudfront.net/webapi/imagesV3/Cropped/SalePage/10074446/0/638991725931430000?v=1",
+              "size": "full",
+              "aspectRatio": "1:1",
+              "aspectMode": "cover"
+            },
+            "body": {
+              "type": "box",
+              "layout": "vertical",
+              "contents": [
+                {
+                  "type": "text",
+                  "text": "氣質蕾絲涼感養脂®內衣（立體杯） - 豆沙【R81031】",
+                  "weight": "bold",
+                  "size": "md",
+                  "wrap": true
+                },
+                {
+                  "type": "text",
+                  "text": "NT$ 1,380",
+                  "size": "xl",
+                  "color": "#00C300",
+                  "weight": "bold",
+                  "margin": "md"
+                }
+              ]
+            },
+            "footer": {
+              "type": "box",
+              "layout": "vertical",
+              "spacing": "sm",
+              "contents": [
+                {
+                  "type": "button",
+                  "style": "primary",
+                  "height": "sm",
+                  "action": {
+                    "type": "uri",
+                    "label": "查看商品",
+                    "uri": "https://www.dailybelle.com.tw/SalePage/Index/10074446"
+                  },
+                  "color": "#00C300"
+                }
+              ]
+            }
+          },
+          {
+            "type": "bubble",
+            "hero": {
+              "type": "image",
+              "url": "https://diz36nn4q02zr.cloudfront.net/webapi/imagesV3/Cropped/SalePage/10690992/0/638974917899530000?v=1",
+              "size": "full",
+              "aspectRatio": "1:1",
+              "aspectMode": "cover"
+            },
+            "body": {
+              "type": "box",
+              "layout": "vertical",
+              "contents": [
+                {
+                  "type": "text",
+                  "text": "LIFTY · 雲感輕養脂內衣（薄軟杯）－粉【R8661】",
+                  "weight": "bold",
+                  "size": "md",
+                  "wrap": true
+                },
+                {
+                  "type": "text",
+                  "text": "NT$ 1,980",
+                  "size": "xl",
+                  "color": "#00C300",
+                  "weight": "bold",
+                  "margin": "md"
+                }
+              ]
+            },
+            "footer": {
+              "type": "box",
+              "layout": "vertical",
+              "spacing": "sm",
+              "contents": [
+                {
+                  "type": "button",
+                  "style": "primary",
+                  "height": "sm",
+                  "action": {
+                    "type": "uri",
+                    "label": "查看商品",
+                    "uri": "https://www.dailybelle.com.tw/SalePage/Index/10690992"
+                  },
+                  "color": "#00C300"
+                }
+              ]
+            }
+          },
+          {
+            "type": "bubble",
+            "hero": {
+              "type": "image",
+              "url": "https://diz36nn4q02zr.cloudfront.net/webapi/imagesV3/Cropped/SalePage/10075073/0/638991725953630000?v=1",
+              "size": "full",
+              "aspectRatio": "1:1",
+              "aspectMode": "cover"
+            },
+            "body": {
+              "type": "box",
+              "layout": "vertical",
+              "contents": [
+                {
+                  "type": "text",
+                  "text": "經典冰肌幾何圓圈集中養脂®內衣 - 膚【R7001】",
+                  "weight": "bold",
+                  "size": "md",
+                  "wrap": true
+                },
+                {
+                  "type": "text",
+                  "text": "NT$ 1,380",
+                  "size": "xl",
+                  "color": "#00C300",
+                  "weight": "bold",
+                  "margin": "md"
+                }
+              ]
+            },
+            "footer": {
+              "type": "box",
+              "layout": "vertical",
+              "spacing": "sm",
+              "contents": [
+                {
+                  "type": "button",
+                  "style": "primary",
+                  "height": "sm",
+                  "action": {
+                    "type": "uri",
+                    "label": "查看商品",
+                    "uri": "https://www.dailybelle.com.tw/SalePage/Index/10075073"
+                  },
+                  "color": "#00C300"
+                }
+              ]
+            }
+          },
+          {
+            "type": "bubble",
+            "hero": {
+              "type": "image",
+              "url": "https://diz36nn4q02zr.cloudfront.net/webapi/imagesV3/Cropped/SalePage/10131186/0/638991726497930000?v=1",
+              "size": "full",
+              "aspectRatio": "1:1",
+              "aspectMode": "cover"
+            },
+            "body": {
+              "type": "box",
+              "layout": "vertical",
+              "contents": [
+                {
+                  "type": "text",
+                  "text": "法式花園蕾絲涼感養脂®內衣（立體杯）－藍【R86131】",
+                  "weight": "bold",
+                  "size": "md",
+                  "wrap": true
+                },
+                {
+                  "type": "text",
+                  "text": "NT$ 1,880",
+                  "size": "xl",
+                  "color": "#00C300",
+                  "weight": "bold",
+                  "margin": "md"
+                }
+              ]
+            },
+            "footer": {
+              "type": "box",
+              "layout": "vertical",
+              "spacing": "sm",
+              "contents": [
+                {
+                  "type": "button",
+                  "style": "primary",
+                  "height": "sm",
+                  "action": {
+                    "type": "uri",
+                    "label": "查看商品",
+                    "uri": "https://www.dailybelle.com.tw/SalePage/Index/10131186"
+                  },
+                  "color": "#00C300"
+                }
+              ]
+            }
+          }
+        ]
+      }
+    }
+  ]
+}
