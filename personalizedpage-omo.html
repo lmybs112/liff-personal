@@ -6921,7 +6921,7 @@
         }
 
         // 轉換為 Flex Message 格式
-        return edmItems.slice(0, 4).map(item => ({
+        return edmItems.slice(0, 12).map(item => ({
           name: item.name || item.title || '精選商品',
           price: item.sale_price ? `NT$ ${item.sale_price}` : '價格請洽詢',
           imageUrl: item.image_link || item.image || 'https://placehold.co/300x300',
