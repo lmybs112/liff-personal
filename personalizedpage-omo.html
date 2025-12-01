@@ -5786,8 +5786,7 @@
           if (products.length >= 6) return // 最多 6 個商品
           
           const title = item.getAttribute('data-title') || item.querySelector('.embeddedItemInfo__title')?.textContent?.trim() || ''
-          // 優先使用 href（網頁上實際可點擊的連結），如果沒有則使用 data-link
-          const link = item.getAttribute('href') || item.getAttribute('data-link') || '#'
+          const link = item.getAttribute('data-link') || item.getAttribute('href') || '#'
           const imgElement = item.querySelector('.embeddedItem__imgBox img')
           const imageLink = imgElement?.src || imgElement?.getAttribute('src') || ''
           
@@ -5854,8 +5853,7 @@
             if (products.length >= 6) return // 已經足夠 6 個
             
             const title = item.getAttribute('data-title') || item.querySelector('.embeddedItemInfo__title')?.textContent?.trim() || ''
-            // 優先使用 href（網頁上實際可點擊的連結），如果沒有則使用 data-link
-            const link = item.getAttribute('href') || item.getAttribute('data-link') || '#'
+            const link = item.getAttribute('data-link') || item.getAttribute('href') || '#'
             const imgElement = item.querySelector('.embeddedItem__imgBox img')
             const imageLink = imgElement?.src || imgElement?.getAttribute('src') || ''
             
@@ -6963,6 +6961,7 @@
           if (products.length >= 12) return // Flex Message Carousel 最多 12 個
           
           const name = item.getAttribute('data-title') || item.querySelector('.embeddedItemInfo__title')?.textContent?.trim() || '精選商品'
+          // 優先使用 data-link（與網頁上點擊的商品連結一致）
           const link = item.getAttribute('data-link') || item.getAttribute('href') || '#'
           const imgElement = item.querySelector('.embeddedItem__imgBox img')
           const imageUrl = imgElement?.src || imgElement?.getAttribute('src') || 'https://placehold.co/300x300'
@@ -6977,7 +6976,7 @@
               imageUrl: imageUrl,
               link: link
             })
-            console.log(`  ✅ 商品 ${products.length}: ${name} - ${price}`)
+            console.log(`  ✅ 商品 ${products.length}: ${name} - ${price} - 連結: ${link}`)
           }
         })
         
@@ -6992,6 +6991,7 @@
             if (products.length >= 12) return // 已經足夠 12 個
             
             const name = item.getAttribute('data-title') || item.querySelector('.embeddedItemInfo__title')?.textContent?.trim() || '精選商品'
+            // 優先使用 data-link（與網頁上點擊的商品連結一致）
             const link = item.getAttribute('data-link') || item.getAttribute('href') || '#'
             const imgElement = item.querySelector('.embeddedItem__imgBox img')
             const imageUrl = imgElement?.src || imgElement?.getAttribute('src') || 'https://placehold.co/300x300'
@@ -7007,7 +7007,7 @@
                 imageUrl: imageUrl,
                 link: link
               })
-              console.log(`  ✅ 商品 ${products.length}: ${name} - ${price}`)
+              console.log(`  ✅ 商品 ${products.length}: ${name} - ${price} - 連結: ${link}`)
             }
           })
           
