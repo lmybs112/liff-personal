@@ -5563,13 +5563,17 @@
       let isProcessing = false
 
       function sendSubscribeMail() {
+        console.log('🔵 sendSubscribeMail 函數被調用')
         const emailInput = document.getElementById('mailSectionInput')
         const mailSectionBtn = document.getElementById('mailSectionBtn')
         const finishElement = document.getElementById('mailSectionBtn-finish')
         const sendElement = document.getElementById('mailSectionBtn--send')
 
         // 防止連續點擊
-        if (isProcessing) return
+        if (isProcessing) {
+          console.log('⚠️ 正在處理中，跳過此次點擊')
+          return
+        }
         isProcessing = true
         setTimeout(() => {
           isProcessing = false
@@ -5578,17 +5582,21 @@
         // 獲取並驗證 email
         const email = emailInput.value.trim()
         if (!email) {
-          // 可以觸發自訂彈窗代替 alert
+          console.log('⚠️ Email 為空，重置處理狀態')
+          isProcessing = false
           return
         }
 
         // 檢查 email 格式
         if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+          console.log('⚠️ Email 格式不正確:', email)
           showSendAlert('send-email-valid')
           emailInput.classList.add('invalid')
-          // emailInput.select()
+          isProcessing = false
           return
         }
+
+        console.log('✅ Email 驗證通過:', email)
 
         // 初始化按鈕狀態
         mailSectionBtn.classList.remove('sent')
@@ -5598,14 +5606,39 @@
 
         // 執行 API 請求
         const template = document.getElementById('emailTemplate').content.cloneNode(true)
-        const jsonData =
-          randomGen === 'true'
-            ? defaultEdmItems
-            : JSON.parse(sessionStorage.getItem('inf-ai-edm-items') || '[]')
+        
+        // 優先從畫面上的 DOM 提取產品資料，如果沒有則從 sessionStorage 或 defaultEdmItems
+        let jsonData = []
+        
+        if (randomGen === 'true') {
+          jsonData = defaultEdmItems
+          console.log('📦 使用 defaultEdmItems，長度:', jsonData.length)
+        } else {
+          // 先嘗試從 DOM 提取
+          const domProducts = extractProductDataFromDOM()
+          if (domProducts.length >= 4) {
+            jsonData = domProducts
+            console.log('✅ 從 DOM 提取產品資料成功，長度:', jsonData.length)
+          } else {
+            // 如果 DOM 沒有足夠的資料，嘗試從 sessionStorage
+            const sessionData = JSON.parse(sessionStorage.getItem('inf-ai-edm-items') || '[]')
+            if (sessionData.length >= 4) {
+              jsonData = sessionData
+              console.log('✅ 從 sessionStorage 讀取產品資料，長度:', jsonData.length)
+            } else {
+              // 如果都不夠，使用 DOM 的資料（即使少於 4 個）
+              jsonData = domProducts.length > 0 ? domProducts : sessionData
+              console.warn('⚠️ 產品資料不足，DOM:', domProducts.length, 'sessionStorage:', sessionData.length)
+            }
+          }
+        }
+        
+        console.log('📦 最終使用的 jsonData 長度:', jsonData.length, 'randomGen:', randomGen, 'jsonData:', jsonData)
         const productHtmlArray = generateProductHtml(jsonData) // 假設已定義
 
         if (jsonData.length >= 4) {
           const placeholders = template.querySelectorAll('.product-placeholder')
+          console.log('✅ 找到', placeholders.length, '個產品佔位符，準備填入產品資料')
           placeholders[0].innerHTML = productHtmlArray[0]
           placeholders[1].innerHTML = productHtmlArray[1]
           placeholders[2].innerHTML = productHtmlArray[2]
@@ -5613,12 +5646,13 @@
           placeholders[4].innerHTML = productHtmlArray[4]
           placeholders[5].innerHTML = productHtmlArray[5]
         } else {
-          // console.warn('Not enough products returned from API')
+          console.warn('⚠️ 產品數量不足 (需要 >= 4，實際:', jsonData.length, ')，重置處理狀態並返回')
           const messageData = {
             type: 'send-email-error',
             value: true
           }
           window.parent.postMessage(messageData, '*')
+          isProcessing = false
           return
         }
 
@@ -5636,6 +5670,7 @@
         // }
 
         const emailTemplate = new XMLSerializer().serializeToString(template)
+        console.log('📧 準備發送 API 請求，email:', email)
 
         fetch(
           'https://1r67xu2nn6.execute-api.ap-northeast-1.amazonaws.com/default/mail_edm_invoke',
@@ -5652,11 +5687,12 @@
           }
         )
           .then((response) => {
+            console.log('📡 API 回應狀態:', response.status, response.statusText)
             if (!response.ok) throw new Error('Network response was not ok')
             return response // 假設 API 返回 JSON
           })
           .then((data) => {
-            // console.log('✅ Email sent successfully:', data)
+            console.log('✅ Email 發送成功:', data)
             mailSectionBtn.classList.add('sent')
             sendElement.style.display = 'none'
             // mailSectionBtn.disabled = false
@@ -5665,16 +5701,18 @@
             finishElement.style.transition = 'opacity 0.4s'
             finishElement.style.opacity = '1'
             showSendAlert('send-email-finish')
+            isProcessing = false
           })
           .catch((error) => {
             showSendAlert('send-email-error')
-            console.error('❌ Email sending failed:', error)
+            console.error('❌ Email 發送失敗:', error)
             mailSectionBtn.classList.remove('sent')
             // mailSectionBtn.disabled = false
             finishElement.style.display = 'none'
             finishElement.style.opacity = '0'
             sendElement.style.display = 'block'
             emailInput.value = '' // 清空輸入欄位
+            isProcessing = false
           })
       }
 
@@ -5733,6 +5771,145 @@
         }
 
         return { member_id: member_id, lgiven_id: lgiven_id, skuContent: skuContent }
+      }
+
+      // 從畫面上的推薦區塊提取產品資料
+      function extractProductDataFromDOM() {
+        console.log('🔍 開始從 DOM 提取產品資料...')
+        const products = []
+        
+        // 1. 先從 personalized-recommendations 抓取
+        const personalizedItems = document.querySelectorAll('#personalized-recommendations .embeddedItem')
+        console.log(`🔍 找到 ${personalizedItems.length} 個 personalized-recommendations 商品元素`)
+        
+        personalizedItems.forEach((item) => {
+          if (products.length >= 6) return // 最多 6 個商品
+          
+          const title = item.getAttribute('data-title') || item.querySelector('.embeddedItemInfo__title')?.textContent?.trim() || ''
+          const link = item.getAttribute('data-link') || item.getAttribute('href') || '#'
+          const imgElement = item.querySelector('.embeddedItem__imgBox img')
+          const imageLink = imgElement?.src || imgElement?.getAttribute('src') || ''
+          
+          // 提取價格資訊
+          const priceElement = item.querySelector('.embeddedItemInfo__price')
+          const priceText = priceElement?.textContent?.trim() || ''
+          
+          // 解析價格（格式可能是 "NT$ 1,280" 或 "NT$ 1,280"）
+          let price = ''
+          let salePrice = ''
+          
+          if (priceText) {
+            // 檢查是否有折扣標籤（表示有特價）
+            const discountElement = item.querySelector('.embeddedItemInfo__discount')
+            const hasDiscount = discountElement && discountElement.textContent.trim() !== ''
+            
+            // 提取價格數字（移除 "NT$" 和空格）
+            const priceMatch = priceText.match(/NT\$\s*([\d,]+)/)
+            if (priceMatch) {
+              const priceValue = priceMatch[1].replace(/,/g, '')
+              
+              if (hasDiscount) {
+                // 有折扣標籤，當前價格是特價
+                salePrice = priceValue
+                // 嘗試從折扣百分比計算原價（如果可能）
+                const discountText = discountElement.textContent.trim()
+                const discountMatch = discountText.match(/(\d+)%/)
+                if (discountMatch) {
+                  const discountPercent = parseInt(discountMatch[1])
+                  const originalPrice = Math.round(parseInt(priceValue) / (1 - discountPercent / 100))
+                  price = originalPrice.toString()
+                } else {
+                  price = priceValue // 如果無法計算，就用當前價格作為原價
+                }
+              } else {
+                // 沒有折扣標籤，當前價格就是原價
+                price = priceValue
+              }
+            }
+          }
+          
+          // 過濾掉 placeholder 圖片和無效商品
+          if (imageLink && !imageLink.includes('placehold.co') && title) {
+            products.push({
+              image_link: imageLink,
+              title: title,
+              link: link,
+              price: price || '0',
+              sale_price: salePrice || '',
+              description: title
+            })
+            console.log(`  ✅ 已收集商品 ${products.length}: ${title} - NT$ ${salePrice || price}`)
+          }
+        })
+        
+        console.log(`📦 從 personalized-recommendations 收集到 ${products.length} 個商品`)
+        
+        // 2. 如果不足 6 個，從 more-recommendations 補足
+        if (products.length < 6) {
+          const moreItems = document.querySelectorAll('#more-recommendations .embeddedItem')
+          console.log(`🔍 找到 ${moreItems.length} 個 more-recommendations 商品元素`)
+          
+          moreItems.forEach((item) => {
+            if (products.length >= 6) return // 已經足夠 6 個
+            
+            const title = item.getAttribute('data-title') || item.querySelector('.embeddedItemInfo__title')?.textContent?.trim() || ''
+            const link = item.getAttribute('data-link') || item.getAttribute('href') || '#'
+            const imgElement = item.querySelector('.embeddedItem__imgBox img')
+            const imageLink = imgElement?.src || imgElement?.getAttribute('src') || ''
+            
+            // 提取價格資訊
+            const priceElement = item.querySelector('.embeddedItemInfo__price')
+            const priceText = priceElement?.textContent?.trim() || ''
+            
+            // 解析價格
+            let price = ''
+            let salePrice = ''
+            
+            if (priceText) {
+              const discountElement = item.querySelector('.embeddedItemInfo__discount')
+              const hasDiscount = discountElement && discountElement.textContent.trim() !== ''
+              
+              const priceMatch = priceText.match(/NT\$\s*([\d,]+)/)
+              if (priceMatch) {
+                const priceValue = priceMatch[1].replace(/,/g, '')
+                
+                if (hasDiscount) {
+                  salePrice = priceValue
+                  const discountText = discountElement.textContent.trim()
+                  const discountMatch = discountText.match(/(\d+)%/)
+                  if (discountMatch) {
+                    const discountPercent = parseInt(discountMatch[1])
+                    const originalPrice = Math.round(parseInt(priceValue) / (1 - discountPercent / 100))
+                    price = originalPrice.toString()
+                  } else {
+                    price = priceValue
+                  }
+                } else {
+                  price = priceValue
+                }
+              }
+            }
+            
+            // 過濾掉 placeholder 圖片、重複商品和無效商品
+            const isDuplicate = products.some(p => p.image_link === imageLink || p.title === title)
+            if (imageLink && !imageLink.includes('placehold.co') && !isDuplicate && title) {
+              products.push({
+                image_link: imageLink,
+                title: title,
+                link: link,
+                price: price || '0',
+                sale_price: salePrice || '',
+                description: title
+              })
+              console.log(`  ✅ 已收集商品 ${products.length}: ${title} - NT$ ${salePrice || price}`)
+            }
+          })
+          
+          console.log(`📦 補充後共收集到 ${products.length} 個商品`)
+        }
+        
+        console.log(`✅ 最終返回 ${products.length} 個商品`)
+        return products
       }
 
       function generateProductHtml(images) {
