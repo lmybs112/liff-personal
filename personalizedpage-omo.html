@@ -6961,7 +6961,6 @@
           if (products.length >= 12) return // Flex Message Carousel 最多 12 個
           
           const name = item.getAttribute('data-title') || item.querySelector('.embeddedItemInfo__title')?.textContent?.trim() || '精選商品'
-          // 優先使用 data-link（與網頁上點擊的商品連結一致）
           const link = item.getAttribute('data-link') || item.getAttribute('href') || '#'
           const imgElement = item.querySelector('.embeddedItem__imgBox img')
           const imageUrl = imgElement?.src || imgElement?.getAttribute('src') || 'https://placehold.co/300x300'
@@ -6976,7 +6975,7 @@
               imageUrl: imageUrl,
               link: link
             })
-            console.log(`  ✅ 商品 ${products.length}: ${name} - ${price} - 連結: ${link}`)
+            console.log(`  ✅ 商品 ${products.length}: ${name} - ${price}`)
           }
         })
         
@@ -6991,7 +6990,6 @@
             if (products.length >= 12) return // 已經足夠 12 個
             
             const name = item.getAttribute('data-title') || item.querySelector('.embeddedItemInfo__title')?.textContent?.trim() || '精選商品'
-            // 優先使用 data-link（與網頁上點擊的商品連結一致）
             const link = item.getAttribute('data-link') || item.getAttribute('href') || '#'
             const imgElement = item.querySelector('.embeddedItem__imgBox img')
             const imageUrl = imgElement?.src || imgElement?.getAttribute('src') || 'https://placehold.co/300x300'
@@ -7007,7 +7005,7 @@
                 imageUrl: imageUrl,
                 link: link
               })
-              console.log(`  ✅ 商品 ${products.length}: ${name} - ${price} - 連結: ${link}`)
+              console.log(`  ✅ 商品 ${products.length}: ${name} - ${price}`)
             }
           })
           
@@ -7114,55 +7112,64 @@
 
       // 建立 Flex Message JSON
       function createFlexMessage(products) {
-        const bubbles = products.map(product => ({
-          type: 'bubble',
-          hero: {
-            type: 'image',
-            url: product.imageUrl,
-            size: 'full',
-            aspectRatio: '1:1',
-            aspectMode: 'cover'
-          },
-          body: {
-            type: 'box',
-            layout: 'vertical',
-            contents: [
-              {
-                type: 'text',
-                text: product.name,
-                weight: 'bold',
-                size: 'md',
-                wrap: true
-              },
-              {
-                type: 'text',
-                text: product.price,
-                size: 'xl',
-                color: '#00C300',
-                weight: 'bold',
-                margin: 'md'
-              }
-            ]
-          },
-          footer: {
-            type: 'box',
-            layout: 'vertical',
-            spacing: 'sm',
-            contents: [
-              {
-                type: 'button',
-                style: 'primary',
-                height: 'sm',
-                action: {
-                  type: 'uri',
-                  label: '查看商品',
-                  uri: product.link
+        // 取得當前頁面 URL 作為基礎 URL
+        const currentPageUrl = new URL(window.location.href)
+        
+        const bubbles = products.map(product => {
+          // 建立帶 link 參數的 URL（與網頁上點擊的商品連結格式一致）
+          const shareUrl = new URL(currentPageUrl.toString())
+          shareUrl.searchParams.set('link', product.link || '')
+          
+          return {
+            type: 'bubble',
+            hero: {
+              type: 'image',
+              url: product.imageUrl,
+              size: 'full',
+              aspectRatio: '1:1',
+              aspectMode: 'cover'
+            },
+            body: {
+              type: 'box',
+              layout: 'vertical',
+              contents: [
+                {
+                  type: 'text',
+                  text: product.name,
+                  weight: 'bold',
+                  size: 'md',
+                  wrap: true
                 },
-                color: '#00C300'
-              }
-            ]
+                {
+                  type: 'text',
+                  text: product.price,
+                  size: 'xl',
+                  color: '#00C300',
+                  weight: 'bold',
+                  margin: 'md'
+                }
+              ]
+            },
+            footer: {
+              type: 'box',
+              layout: 'vertical',
+              spacing: 'sm',
+              contents: [
+                {
+                  type: 'button',
+                  style: 'primary',
+                  height: 'sm',
+                  action: {
+                    type: 'uri',
+                    label: '查看商品',
+                    uri: shareUrl.toString()
+                  },
+                  color: '#00C300'
+                }
+              ]
+            }
           }
-        }))
+        })
 
         return {
           type: 'flex',
