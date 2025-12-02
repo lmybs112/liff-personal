@@ -1056,7 +1056,16 @@
             PID: ids.skuContent,
             SP_PID:"xxSOCIAL PROOF",
             SIZEAI_ptr:"bhv"
-          } : {
+          } :  brand.toLocaleUpperCase() === 'CLARKS' ? {
+            Brand: Brand,
+            LGVID: ids.lgiven_id,
+            MRID: ids.member_id,
+            recom_num: "12",
+            "series_out": "[\"女\"]",
+            PID: ids.skuContent,
+            SP_PID:"xxSOCIAL PROOF",
+            SIZEAI_ptr:"bhv"
+          }:{
             Brand: Brand,
             LGVID: ids.lgiven_id,
             MRID: ids.member_id,
@@ -1097,7 +1106,7 @@
 
             return result
           }
-          const api_recom_product_url = brand.toLocaleUpperCase() === 'DABE' ? 'HTTP_stock_cdp_product_recommendation':'HTTP_inf_alpha_bhv_cdp_product_recommendation'
+          const api_recom_product_url = brand.toLocaleUpperCase() === 'DABE' || brand.toLocaleUpperCase() === 'CLARKS' ? 'HTTP_stock_cdp_product_recommendation':'HTTP_inf_alpha_bhv_cdp_product_recommendation'
           fetch(
             `https://api.inffits.com/${api_recom_product_url}/extension/recom_product`,
             // 'https://api.inffits.com/HTTP_inf_bhv_cdp_product_recommendation/extension/recom_product',
