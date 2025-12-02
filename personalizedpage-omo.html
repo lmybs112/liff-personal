@@ -195,6 +195,50 @@
         width: 100%;
         display: flex;
         justify-content: center;
+        position: relative;
+      }
+
+      /* Loading 指示器樣式 */
+      .tryon-iframe-loading {
+        position: absolute;
+        top: 50%;
+        left: 50%;
+        transform: translate(-50%, -50%);
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        gap: 16px;
+        z-index: 15;
+        padding: 32px;
+        pointer-events: none;
+      }
+
+      .tryon-iframe-loading__spinner {
+        width: 48px;
+        height: 48px;
+        border: 4px solid #f1e9dd;
+        border-top-color: #4a341f;
+        border-radius: 50%;
+        animation: tryon-spin 1s linear infinite;
+      }
+
+      @keyframes tryon-spin {
+        to {
+          transform: rotate(360deg);
+        }
+      }
+
+      .tryon-iframe-loading__text {
+        color: #4a341f;
+        font-size: 14px;
+        letter-spacing: 0.05em;
+        margin: 0;
+      }
+
+      #inffits_cblock {
+        position: relative;
+        width: 100%;
+        min-height: 400px;
       }
 
       .tryon-showcase__side-panel {
@@ -3323,7 +3367,7 @@
       const type = params.get('type') || 'pd'
       const TRYON_COPILOT_ENDPOINT = 'https://api.inffits.com/pid_get_copilot_status/model'
       const TRYON_COMPANION_SOURCE = {
-        brand: 'DABE',
+        brand: Brand,
         // productId: '10108161',
         Link: link
       }
@@ -3902,16 +3946,82 @@
     }
     Gender_ClothID = Results["Gender_ClothID"];
     const ctryonWindow = document.getElementById('inffits_ctryon_window');
-    if (ctryonWindow) {
-      ctryonWindow.setAttribute('src',
-        'https://inffits.com/webDesign/HTML/js/iframe/indexwebiframe_CAX_tw_' +
-        Brand.toLowerCase() + '.html?' + Gender_ClothID
-      );
+    
+    // 定義用於 iframe 錯誤處理的變量
+    let SizeAIFast_switch = true;
+    let iframeReadyTimeout = null;
+    let iframeReadyHandler = null;
+    
+    
+    // 設置 iframe 錯誤處理和超時機制
+    function setupIframeErrorHandling(iframe) {
+      // 清除之前的超時
+      if (iframeReadyTimeout) {
+        clearTimeout(iframeReadyTimeout);
+      }
+      
+      // 設置超時機制：如果 3 秒內沒有收到 IDRxReady 消息，觸發 fallback（快速響應避免顯示 404）
+      iframeReadyTimeout = setTimeout(() => {
+        console.warn('Iframe 載入超時（可能為 404 或其他錯誤），觸發 fallback');
+        handleTryonIframeFallback();
+      }, 3000);
+      
+      // 監聽 iframe load 事件（雖然跨域可能無法完全檢測，但可以作為輔助）
+      iframe.addEventListener('load', () => {
+        // 嘗試檢查 iframe 是否成功載入
+        try {
+          // 如果跨域，這裡可能會拋出錯誤，但我們已經有超時機制作為備份
+          const iframeDoc = iframe.contentDocument || iframe.contentWindow?.document;
+          if (!iframeDoc) {
+            // 跨域情況，依賴超時機制和消息監聽
+            return;
+          }
+        } catch (e) {
+          // 跨域錯誤，這是正常的，依賴超時機制和消息監聽
+        }
+      });
+      
+      // 監聽 iframe error 事件
+      iframe.addEventListener('error', () => {
+        console.warn('Iframe 載入錯誤（可能為 404），觸發 fallback');
+        if (iframeReadyTimeout) {
+          clearTimeout(iframeReadyTimeout);
+        }
+        handleTryonIframeFallback();
+      });
     }
     
-    let SizeAIFast_switch = true;
-    window.addEventListener('message', function (event) {
+    // 創建新的消息監聽器（避免重複添加）
+    if (iframeReadyHandler) {
+      window.removeEventListener('message', iframeReadyHandler);
+    }
+    
+    iframeReadyHandler = function (event) {
       if (event.data["MsgHeader"] == "IDRxReady") {
+        // 清除超時，iframe 已成功載入
+        if (iframeReadyTimeout) {
+          clearTimeout(iframeReadyTimeout);
+          iframeReadyTimeout = null;
+        }
+        
+        // 成功載入後才顯示 iframe 容器（確保不會顯示 404）
+        const iframeContainer = document.getElementById('inffits_cblock');
+        const loadingEl = document.getElementById('tryonIframeLoading');
+        const ctryonEl = document.getElementById('ctryon');
+        
+        // 隱藏 loading，顯示 iframe
+        if (loadingEl) {
+          loadingEl.style.display = 'none';
+        }
+        if (ctryonEl) {
+          ctryonEl.style.display = '';
+        }
+        if (iframeContainer) {
+          iframeContainer.style.display = '';
+          iframeContainer.style.visibility = '';
+          iframeContainer.style.opacity = '';
+        }
+        
         let member_id = "";
         let given_id = "";
         let lgiven_id = "";
@@ -3963,10 +4073,41 @@
           );
         }
       }
-    }, false);
+    };
+    
+    // 註冊消息監聽器
+    window.addEventListener('message', iframeReadyHandler, false);
+    
+    // 設置 iframe src，但保持完全隱藏，只有收到成功消息後才顯示
+    if (ctryonWindow) {
+      const iframeUrl = 'https://inffits.com/webDesign/HTML/js/iframe/indexwebiframe_CAX_tw_' +
+        Brand.toLowerCase() + '.html?' + Gender_ClothID;
+      
+      // 完全隱藏 iframe 容器（使用 display: none 確保完全不顯示，包括 404）
+      const iframeContainer = document.getElementById('inffits_cblock');
+      const loadingEl = document.getElementById('tryonIframeLoading');
+      const ctryonEl = document.getElementById('ctryon');
+      
+      if (iframeContainer) {
+        // 隱藏 iframe，但顯示 loading
+        if (ctryonEl) {
+          ctryonEl.style.display = 'none';
+        }
+        if (loadingEl) {
+          loadingEl.style.display = 'flex';
+        }
+      }
+      
+      // 直接設置 iframe src（在隱藏狀態下載入）
+      // 只有收到 IDRxReady 消息後才會顯示，如果 3 秒內沒收到消息則觸發 fallback
+      ctryonWindow.setAttribute('src', iframeUrl);
+      setupIframeErrorHandling(ctryonWindow);
+    }
   })
   .catch(error => {
     console.error('Error:', error);
+    // API 請求失敗時也觸發 fallback
+    handleTryonIframeFallback();
   });
 }
 
@@ -3974,7 +4115,20 @@
         if (isTryonIframeFallback) return
         isTryonIframeFallback = true
         const iframeBlock = document.getElementById('inffits_cblock')
+        const loadingEl = document.getElementById('tryonIframeLoading')
+        const ctryonEl = document.getElementById('ctryon')
+        
+        // 隱藏 loading 和 iframe
+        if (loadingEl) {
+          loadingEl.style.display = 'none'
+        }
+        if (ctryonEl) {
+          ctryonEl.style.display = 'none'
+        }
         if (iframeBlock) {
+          // 清理之前設置的 visibility 和 opacity，然後隱藏
+          iframeBlock.style.visibility = '';
+          iframeBlock.style.opacity = '';
           iframeBlock.style.display = 'none'
         }
         const inlineGallery = document.getElementById('tryonGalleryInline')
@@ -4006,6 +4160,11 @@
             <div class="tryon-showcase__body">
               <div class="tryon-showcase__iframe">
                 <div id="inffits_cblock">
+                  <!-- Loading 指示器 -->
+                  <div id="tryonIframeLoading" class="tryon-iframe-loading" style="display: none;">
+                    <div class="tryon-iframe-loading__spinner"></div>
+                    <p class="tryon-iframe-loading__text">載入試衣間中...</p>
+                  </div>
                   <div
                     id="ctryon"
                     style="
