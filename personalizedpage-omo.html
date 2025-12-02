@@ -241,6 +241,10 @@
         min-height: 400px;
       }
 
+      #ctryon {
+        transition: opacity 0.5s ease-in-out;
+      }
+
       .tryon-showcase__side-panel {
         width: 100%;
         display: flex;
@@ -578,6 +582,8 @@
         gap: 16px;
         border-radius: 32px;
         background: #fff;
+        transition: opacity 0.5s ease-in-out;
+        opacity: 0;
         padding: 24px;
         box-shadow: 0 30px 80px rgba(0, 0, 0, 0.08);
         max-height: 698px;
@@ -4009,17 +4015,25 @@
         const loadingEl = document.getElementById('tryonIframeLoading');
         const ctryonEl = document.getElementById('ctryon');
         
-        // 隱藏 loading，顯示 iframe
+        // 先隱藏 loading
         if (loadingEl) {
           loadingEl.style.display = 'none';
         }
+        
+        // 顯示 iframe 並使用淡入效果
         if (ctryonEl) {
           ctryonEl.style.display = '';
+          // 先設置 opacity 為 0，然後在下一幀觸發淡入動畫
+          ctryonEl.style.opacity = '0';
+          requestAnimationFrame(() => {
+            requestAnimationFrame(() => {
+              ctryonEl.style.opacity = '1';
+            });
+          });
         }
         if (iframeContainer) {
           iframeContainer.style.display = '';
           iframeContainer.style.visibility = '';
-          iframeContainer.style.opacity = '';
         }
         
         let member_id = "";
@@ -4092,6 +4106,7 @@
         // 隱藏 iframe，但顯示 loading
         if (ctryonEl) {
           ctryonEl.style.display = 'none';
+          ctryonEl.style.opacity = '0'; // 設置初始 opacity 為 0，準備淡入
         }
         if (loadingEl) {
           loadingEl.style.display = 'flex';
@@ -4135,6 +4150,13 @@
         if (inlineGallery) {
           inlineGallery.hidden = false
           inlineGallery.classList.add('tryon-gallery-inline--visible')
+          // 使用淡入效果顯示
+          inlineGallery.style.opacity = '0'
+          requestAnimationFrame(() => {
+            requestAnimationFrame(() => {
+              inlineGallery.style.opacity = '1'
+            })
+          })
         }
         const scrollGallery = document.querySelector('.tryon-scroll-gallery')
         const tryonScrollViewAll = document.querySelector('#tryonScrollViewAll')
@@ -4987,6 +5009,15 @@
         if (inlineWrapper) {
           inlineWrapper.hidden = false
           inlineWrapper.classList.add('tryon-gallery-inline--visible')
+          // 如果還沒有設置 opacity，則添加淡入效果
+          if (inlineWrapper.style.opacity === '' || inlineWrapper.style.opacity === '0') {
+            inlineWrapper.style.opacity = '0'
+            requestAnimationFrame(() => {
+              requestAnimationFrame(() => {
+                inlineWrapper.style.opacity = '1'
+              })
+            })
+          }
         }
         const summaryEl = document.getElementById('tryonGalleryInlineSummary')
         if (summaryEl) {
