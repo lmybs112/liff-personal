@@ -2053,7 +2053,7 @@
       /* LINE 優惠按鈕樣式 - 使用 LINE 主色系 */
       .liff-promo-btn {
         border: none;
-        display: flex !important;
+        display: none; /* 預設隱藏 */
         padding: 12px 24px;
         justify-content: center;
         align-items: center;
@@ -2073,8 +2073,10 @@
         margin-top: 20px;
         position: relative;
         z-index: 10;
-        visibility: visible !important;
-        opacity: 1 !important;
+      }
+
+      .liff-promo-btn--visible {
+        display: flex !important;
       }
 
       .liff-promo-btn:hover:not(:disabled) {
@@ -3368,6 +3370,31 @@
     </template>
     <script src="./js/tryon-carousel-utils.js"></script>
     <script>
+      // 控制 #liffPromoBtn 顯示/隱藏（預設隱藏，只有 showLiffPromoBtn=true 時才顯示）
+      (function() {
+        const urlParams = new URLSearchParams(window.location.search)
+        const showLiffPromoBtnParam = urlParams.get('showLiffPromoBtn')
+        const shouldShow = showLiffPromoBtnParam === 'true' || showLiffPromoBtnParam === '1'
+        
+        function toggleLiffPromoBtn() {
+          const liffPromoBtn = document.getElementById('liffPromoBtn')
+          if (liffPromoBtn) {
+            if (shouldShow) {
+              liffPromoBtn.classList.add('liff-promo-btn--visible')
+            } else {
+              liffPromoBtn.classList.remove('liff-promo-btn--visible')
+            }
+          }
+        }
+        
+        // 如果 DOM 已經載入，立即執行
+        if (document.readyState === 'loading') {
+          document.addEventListener('DOMContentLoaded', toggleLiffPromoBtn)
+        } else {
+          toggleLiffPromoBtn()
+        }
+      })()
+
       const params = new URLSearchParams(window.location.search)
       let Brand = params.get('brand') || ''
       const randomGen = !!Brand ? 'false' : 'true'
