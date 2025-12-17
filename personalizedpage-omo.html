@@ -146,7 +146,7 @@
       .tryon_section .text-section {
         display: none;
       }
-      @media screen and (min-width: 768px) {
+      @media screen and (min-width: 1280px) {
         .tryon_section {
           padding: 100px 80px;
           gap: 64px;
@@ -250,6 +250,8 @@
         display: flex;
         flex-direction: column;
         gap: 16px;
+        max-width: 438px;
+        margin: 0 auto;
       }
 
       .tryon-qr {
@@ -4069,6 +4071,26 @@
           iframeContainer.style.visibility = '';
         }
         
+        // 確保 tryon-scroll-gallery 始終隱藏（不應該顯示中間的垂直粉色橢圓形區塊）
+        const scrollGallery = document.querySelector('.tryon-scroll-gallery')
+        if (scrollGallery) {
+          scrollGallery.style.display = 'none'
+        }
+        
+        // 隱藏 tryon-gallery-inline（fallback 時使用的內聯畫廊）
+        const inlineGallery = document.getElementById('tryonGalleryInline')
+        if (inlineGallery) {
+          inlineGallery.hidden = true
+          inlineGallery.classList.remove('tryon-gallery-inline--visible')
+          inlineGallery.style.opacity = '0'
+        }
+        
+        // iframe 載入成功時，顯示右側「查看更多穿搭靈感」按鈕
+        const qrMetaButton = document.querySelector('.tryon-qr__meta #tryonScrollViewAll')
+        if (qrMetaButton) {
+          qrMetaButton.style.display = 'inline-flex'
+        }
+        
         let member_id = "";
         let given_id = "";
         let lgiven_id = "";
@@ -4191,14 +4213,18 @@
             })
           })
         }
+        // 隱藏 tryon-scroll-gallery 區塊（不應該顯示中間的垂直粉色橢圓形區塊）
         const scrollGallery = document.querySelector('.tryon-scroll-gallery')
-        const tryonScrollViewAll = document.querySelector('#tryonScrollViewAll')
         if (scrollGallery) {
           scrollGallery.style.display = 'none'
         }
-        if (tryonScrollViewAll) {
-          tryonScrollViewAll.style.display = 'none'
+        
+        // 左側顯示「穿搭靈感推薦」時（fallback），隱藏右側「查看更多穿搭靈感」按鈕
+        const qrMetaButton = document.querySelector('.tryon-qr__meta #tryonScrollViewAll')
+        if (qrMetaButton) {
+          qrMetaButton.style.display = 'none'
         }
+        
         renderTryonGalleryInline()
       }
 
@@ -4461,6 +4487,11 @@
           `
           personalizedHeroSection.style.display = 'none'
           tryOnSection.style.display = 'flex'
+          // 確保 tryon-scroll-gallery 始終隱藏（不應該顯示中間的垂直粉色橢圓形區塊）
+          const scrollGallery = document.querySelector('.tryon-scroll-gallery')
+          if (scrollGallery) {
+            scrollGallery.style.display = 'none'
+          }
           requestAnimationFrame(() => {
             initTryonCompanion()
           })
