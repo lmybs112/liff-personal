@@ -1849,6 +1849,10 @@
         padding: 100px 24px;
       }
 
+      .mail-section--hidden {
+        display: none !important;
+      }
+
       .last-img-cover,
       .mail-section img {
         display: none;
@@ -1872,6 +1876,10 @@
         display: flex;
         flex-direction: column;
         gap: 18px 0;
+      }
+
+      .mail-section__text--hidden {
+        display: none !important;
       }
 
       .mail-section .mail-section__title {
@@ -1906,6 +1914,10 @@
         align-items: center;
         gap: 10px;
         align-self: stretch;
+      }
+
+      .mail-section__content--hidden {
+        display: none !important;
       }
 
       .mail-section .mail-section__input {
@@ -3382,16 +3394,55 @@
     </template>
     <script src="./js/tryon-carousel-utils.js"></script>
     <script>
-      // 控制 #liffPromoBtn 顯示/隱藏（預設隱藏，只有 showLiffPromoBtn=true 時才顯示）
+      // 控制 mail-section 區塊和內容的顯示/隱藏
       (function() {
         const urlParams = new URLSearchParams(window.location.search)
+        const showMailSectionParam = urlParams.get('showMailSection')
         const showLiffPromoBtnParam = urlParams.get('showLiffPromoBtn')
-        const shouldShow = showLiffPromoBtnParam === 'true' || showLiffPromoBtnParam === '1'
         
-        function toggleLiffPromoBtn() {
+        // 如果參數為 'true' 或 '1'，則顯示；否則隱藏（預設隱藏）
+        const shouldShowMail = showMailSectionParam === 'true' || showMailSectionParam === '1'
+        const shouldShowLiffPromoBtn = showLiffPromoBtnParam === 'true' || showLiffPromoBtnParam === '1'
+        
+        function toggleMailSection() {
+          const mailSection = document.querySelector('.mail-section')
+          const mailText = document.querySelector('.mail-section__text')
+          const mailContent = document.querySelector('.mail-section__content')
           const liffPromoBtn = document.getElementById('liffPromoBtn')
+          
+          // 如果兩個都是 false，隱藏整個 mail-section 區塊
+          if (!shouldShowMail && !shouldShowLiffPromoBtn) {
+            if (mailSection) {
+              mailSection.classList.add('mail-section--hidden')
+            }
+            return
+          }
+          
+          // 否則顯示 mail-section 區塊
+          if (mailSection) {
+            mailSection.classList.remove('mail-section--hidden')
+          }
+          
+          // 控制 mail 相關內容（標題、描述、輸入框、送出按鈕）
+          if (mailText) {
+            if (shouldShowMail) {
+              mailText.classList.remove('mail-section__text--hidden')
+            } else {
+              mailText.classList.add('mail-section__text--hidden')
+            }
+          }
+          
+          if (mailContent) {
+            if (shouldShowMail) {
+              mailContent.classList.remove('mail-section__content--hidden')
+            } else {
+              mailContent.classList.add('mail-section__content--hidden')
+            }
+          }
+          
+          // 控制 liffPromoBtn
           if (liffPromoBtn) {
-            if (shouldShow) {
+            if (shouldShowLiffPromoBtn) {
               liffPromoBtn.classList.add('liff-promo-btn--visible')
             } else {
               liffPromoBtn.classList.remove('liff-promo-btn--visible')
@@ -3401,11 +3452,11 @@
         
         // 如果 DOM 已經載入，立即執行
         if (document.readyState === 'loading') {
-          document.addEventListener('DOMContentLoaded', toggleLiffPromoBtn)
+          document.addEventListener('DOMContentLoaded', toggleMailSection)
         } else {
-          toggleLiffPromoBtn()
+          toggleMailSection()
         }
-      })()
+      })();
 
       const params = new URLSearchParams(window.location.search)
       let Brand = params.get('brand') || ''
