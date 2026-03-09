@@ -1,0 +1,94 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Document</title>
+</head>
+<body>
+    
+
+
+
+
+
+<script>
+    // ANNS 品牌測試腳本 - 第一階段（不含 SIZEAI，快速返回推薦清單）
+    
+    const requestData = {
+    //  queryStringParameters: {
+        Brand: "ANNS",
+        LGVID: "x",
+        MRID: "",
+        recom_num: "6",
+        PID: "8271316",
+        // 第一階段：不包含 SIZEAI，快速獲取推薦清單
+        // SIZEAI: "True",
+        // SIZEAI_ptr: "bhv",
+        DataItem_MD: "1",
+        bid: {
+          HV: "24.1",
+          WV: "5",
+          CC: "",
+          DataItem: "2010",
+          ClothSize: "",
+          GVID: "INF",
+          Sizes: "",
+          Brand: "ANNS",
+          ml_out: "",
+          Hip: "1-cm",
+          TID: "162410.45086",
+          FitP: "2,2,2,2",
+          LGVID: "INF",
+          ga_id: "INF",
+          MRID: "INF",
+          Gender: "F",
+          Waist: "1-cm",
+          ClothID: "",
+          FMLpath: "FMLSep",
+          Shoulder: "1-cm",
+          AvatarSizeSCWH: "",
+          Transaction: "34",
+          comment: "try_on_report_online",
+          ORDERID: "",
+          DnChest: "1-cm",
+          UpChest: "1-cm",
+          SHOES_MODE: "1",
+          FOOT_CIRCUM: "20",
+          CALF_CIRCUM: "30.4"
+        }
+    //  }
+    };
+    
+    const options = {
+      method: 'POST',
+      headers: {accept: 'application/json', 'content-type': 'application/json'},
+      body: JSON.stringify(requestData)
+    };
+    
+    fetch('https://api.inffits.com/HTTP_pidinfo_cdp_product_recommendation/extension/recom_product', options)
+      .then(response => response.json())
+      .then(response => {
+        console.log("=== 第一階段返回結果 ===");
+        console.log(JSON.stringify(response, null, 2));
+        
+        // 提取資料供第二階段使用
+        if (response.bhv) {
+          const pidList = response.bhv.map(item => item.pid);
+          const bhvList = response.bhv.map(item => ({
+            pid: item.pid,
+            dbid: item.dbid,
+            dataitem_typeid: item.dataitem_typeid
+          }));
+          
+          console.log("\n=== 提取的 PID 列表（供第二階段使用）===");
+          console.log(JSON.stringify(pidList, null, 2));
+          
+          console.log("\n=== 提取的 BHV 列表（供第二階段使用，包含 dbid）===");
+          console.log(JSON.stringify(bhvList, null, 2));
+        }
+      })
+      .catch(err => console.error(err));
+    </script>
+</body>
+</html>

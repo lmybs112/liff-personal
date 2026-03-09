@@ -709,3 +709,155 @@ Content-Type: application/json
     }
   ]
 }
+
+###
+POST https://api.inffits.com/HTTP_pidinfo_cdp_product_recommendation/extension/recom_product?Brand=ANNA&LGVID=X&recom_num=%226%22&DataItem_MD=1
+Content-Type: application/json
+
+ {
+    Brand: "ANNS",
+    LGVID: "x",
+    MRID: "",
+    recom_num: "6",
+    PID: "8271316",
+    DataItem_MD: "1",
+    bid: {
+      HV: "24.1",
+      WV: "5",
+      CC: "",
+      DataItem: "2010",
+      ClothSize: "",
+      GVID: "INF",
+      Sizes: "",
+      Brand: "ANNS",
+      ml_out: "",
+      Hip: "1-cm",
+      TID: "162410.45086",
+      FitP: "2,2,2,2",
+      LGVID: "INF",
+      ga_id: "INF",
+      MRID: "INF",
+      Gender: "F",
+      Waist: "1-cm",
+      ClothID: "",
+      FMLpath: "FMLSep",
+      Shoulder: "1-cm",
+      AvatarSizeSCWH: "",
+      Transaction: "34",
+      comment: "try_on_report_online",
+      ORDERID: "",
+      DnChest: "1-cm",
+      UpChest: "1-cm",
+      SHOES_MODE: "1",
+      FOOT_CIRCUM: "20",
+      CALF_CIRCUM: "30.4"
+    }
+}
+
+
+###
+POST https://api.inffits.com/HTTP_pidinfo_cdp_product_recommendation/extension/recom_product
+Content-Type: application/json
+
+ {
+    Brand: "ANNS",
+    LGVID: "x",
+    MRID: "",
+    recom_num: "6",
+    PID: "8271316",
+    DataItem_MD: "1",
+    bid: {
+      HV: "24.1",
+      WV: "5",
+      CC: "",
+      DataItem: "2010",
+      ClothSize: "",
+      GVID: "INF",
+      Sizes: "",
+      Brand: "ANNS",
+      ml_out: "",
+      Hip: "1-cm",
+      TID: "162410.45086",
+      FitP: "2,2,2,2",
+      LGVID: "INF",
+      ga_id: "INF",
+      MRID: "INF",
+      Gender: "F",
+      Waist: "1-cm",
+      ClothID: "",
+      FMLpath: "FMLSep",
+      Shoulder: "1-cm",
+      AvatarSizeSCWH: "",
+      Transaction: "34",
+      comment: "try_on_report_online",
+      ORDERID: "",
+      DnChest: "1-cm",
+      UpChest: "1-cm",
+      SHOES_MODE: "1",
+      FOOT_CIRCUM: "20",
+      CALF_CIRCUM: "30.4"
+    }
+}
+
+
+
+
+###
+
+POST https://api.inffits.com/HTTP_pidinfo_cdp_product_recommendation/extension/recom_product
+Content-Type: application/json
+{
+    "Brand": "ANNS",
+    "LGVID": "x",
+    "MRID": "",
+    "recom_num": "6",
+    "PID": "8271316",
+    "DataItem_MD": "1",
+    "bid": {
+        "HV": "24.1",
+        "WV": "5",
+        "CC": "",
+        "DataItem": "2010",
+        "ClothSize": "",
+        "GVID": "INF",
+        "Sizes": "",
+        "Brand": "ANNS",
+        "ml_out": "",
+        "Hip": "1-cm",
+        "TID": "162410.45086",
+        "FitP": "2,2,2,2",
+        "LGVID": "INF",
+        "ga_id": "INF",
+        "MRID": "INF",
+        "Gender": "F",
+        "Waist": "1-cm",
+        "ClothID": "",
+        "FMLpath": "FMLSep",
+        "Shoulder": "1-cm",
+        "AvatarSizeSCWH": "",
+        "Transaction": "34",
+        "comment": "try_on_report_online",
+        "ORDERID": "",
+        "DnChest": "1-cm",
+        "UpChest": "1-cm",
+        "SHOES_MODE": "1",
+        "FOOT_CIRCUM": "20",
+        "CALF_CIRCUM": "30.4"
+    }
+}
+###
+
+POST https://api.inffits.com/HTTP_pidinfo_cdp_product_recommendation/extension/recom_product
+Content-Type: application/json
+{
+    "Brand": "ANNS",
+    "LGVID": "x",
+    "MRID": "",
+    "recom_num": "6",
+    "PID": "8271316",
+    "DataItem_MD": "1",
+    "bid": {
+
+       "SHOES_MODE": "1",
+    }
+}
