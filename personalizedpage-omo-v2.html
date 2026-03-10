@@ -239,6 +239,7 @@
         font-size: 14px;
         letter-spacing: 0.05em;
         margin: 0;
+        white-space: nowrap;
       }
 
       #inffits_cblock {
@@ -383,10 +384,12 @@
         color: #4a4a4a;
       }
 
+      @keyframes pid-badge-fadein {
+        from { opacity: 0; transform: translateY(6px); }
+        to   { opacity: 1; transform: translateY(0); }
+      }
+
       .pid-size-success-badge {
-        position: absolute;
-        top: -50px;
-        left: 0px;
         display: inline-flex;
         align-items: center;
         gap: 8px;
@@ -395,7 +398,33 @@
         background: rgba(255, 255, 255, 0.96);
         box-shadow: 0 8px 18px rgba(0, 0, 0, 0.14);
         font-family: 'Noto Sans TC', sans-serif;
-        z-index: 21;
+        animation: pid-badge-fadein 0.45s ease both;
+        /* 手機版：排在輪播下方 */
+        position: static;
+        margin-top: 12px;
+      }
+
+      .pid-recom-carousel-wrapper {
+        display: flex;
+        flex-direction: column;
+        align-items: flex-start;
+      }
+
+      @keyframes pid-badge-fadein-desktop {
+        from { opacity: 0; transform: translateY(-8px); }
+        to   { opacity: 1; transform: translateY(0); }
+      }
+
+      @media (min-width: 769px) {
+        .pid-size-success-badge {
+          /* 桌面版：保留在左上角 */
+          position: absolute;
+          top: -55px;
+          left: 0px;
+          margin-top: 0;
+          z-index: 21;
+          animation-name: pid-badge-fadein-desktop;
+        }
       }
 
       .pid-size-success-badge__icon {
@@ -410,6 +439,19 @@
       .pid-size-success-badge__icon img {
         width: 18px;
         height: 18px;
+      }
+
+      .pid-size-success-badge__text--mobile {
+        display: none;
+      }
+
+      @media (max-width: 768px) {
+        .pid-size-success-badge__text--desktop {
+          display: none;
+        }
+        .pid-size-success-badge__text--mobile {
+          display: inline;
+        }
       }
 
       .pid-size-success-badge__text {
@@ -4552,7 +4594,7 @@
                   <!-- Loading 指示器 -->
                   <div id="tryonIframeLoading" class="tryon-iframe-loading" style="display: none;">
                     <div class="tryon-iframe-loading__spinner"></div>
-                    <p class="tryon-iframe-loading__text">載入試衣間中...</p>
+                    <p class="tryon-iframe-loading__text">載入試穿間中...</p>
                   </div>
                   <div
                     id="ctryon"
@@ -7258,9 +7300,14 @@
                           <div class="pid-size-success-badge__icon">
                             <img src="https://inffits.com/webDesign/HTML/img/inffits_black_logo.svg" alt="infFITS" />
                           </div>
-                          <p class="pid-size-success-badge__text">以下商品都有適合您的尺寸，並且還有庫存！</p>
+                          <p class="pid-size-success-badge__text">
+                            <span class="pid-size-success-badge__text--desktop">以下商品都有適合您的尺寸，並且還有庫存！</span>
+                            <span class="pid-size-success-badge__text--mobile">以上商品都有適合您的尺寸，並且還有庫存！</span>
+                          </p>
                         `
-                        wrapper.appendChild(badge)
+                        setTimeout(() => {
+                          wrapper.appendChild(badge)
+                        }, 300);
                       }
                     }
                   }
