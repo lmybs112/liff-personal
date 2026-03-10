@@ -181,8 +181,9 @@
           embeddedAdjQueryScript.type = 'text/javascript'
           embeddedAdjQueryScript.onload = function () {
             // console.log("jQuery 已成功載入");
-            loadSwiperScript() // 先載入 Swiper
-            callback() // 再執行嵌入腳本
+            loadSwiperScript().then(function () {
+              callback() // 再執行嵌入腳本
+            })
           }
           embeddedAdjQueryScript.onerror = function () {
             console.error('載入 jQuery 時出錯')
@@ -190,27 +191,56 @@
           document.head.appendChild(embeddedAdjQueryScript)
         } else {
           // console.log("jQuery 已經載入");
-          loadSwiperScript() // 先載入 Swiper
-          callback() // 再執行嵌入腳本
+          loadSwiperScript().then(function () {
+            callback() // 再執行嵌入腳本
+          })
         }
       }
   
       //swiper
       function loadSwiperScript() {
-        var swiperStylesheet = document.createElement('link')
-        swiperStylesheet.rel = 'stylesheet'
-        swiperStylesheet.href = 'https://cdn.jsdelivr.net/npm/swiper@11/swiper-bundle.min.css'
-        document.head.appendChild(swiperStylesheet)
+        if (typeof window.Swiper !== 'undefined') {
+          return Promise.resolve()
+        }
   
-        var SwiperScript = document.createElement('script')
-        SwiperScript.src = 'https://cdn.jsdelivr.net/npm/swiper@11/swiper-bundle.min.js'
-        SwiperScript.onload = function () {
-          // console.log("Swiper script loaded successfully");
+        if (window.__embeddedSwiperPromise) {
+          return window.__embeddedSwiperPromise
         }
-        SwiperScript.onerror = function () {
-          console.error('Error loading Swiper script')
-        }
-        document.head.appendChild(SwiperScript)
+  
+        window.__embeddedSwiperPromise = new Promise(function (resolve, reject) {
+          var existingScript = document.querySelector('script[data-embedded-swiper="1"]')
+          if (existingScript) {
+            existingScript.addEventListener('load', function () {
+              resolve()
+            })
+            existingScript.addEventListener('error', function () {
+              reject(new Error('Error loading Swiper script'))
+            })
+            return
+          }
+  
+          var swiperStylesheetExists = document.querySelector('link[data-embedded-swiper="1"]')
+          if (!swiperStylesheetExists) {
+            var swiperStylesheet = document.createElement('link')
+            swiperStylesheet.rel = 'stylesheet'
+            swiperStylesheet.href = 'https://cdn.jsdelivr.net/npm/swiper@11/swiper-bundle.min.css'
+            swiperStylesheet.setAttribute('data-embedded-swiper', '1')
+            document.head.appendChild(swiperStylesheet)
+          }
+  
+          var SwiperScript = document.createElement('script')
+          SwiperScript.src = 'https://cdn.jsdelivr.net/npm/swiper@11/swiper-bundle.min.js'
+          SwiperScript.setAttribute('data-embedded-swiper', '1')
+          SwiperScript.onload = function () {
+            resolve()
+          }
+          SwiperScript.onerror = function () {
+            reject(new Error('Error loading Swiper script'))
+          }
+          document.head.appendChild(SwiperScript)
+        })
+  
+        return window.__embeddedSwiperPromise
       }
       //embedded script
       function loadEmbeddedScript($) {
@@ -1216,6 +1246,16 @@
           }
   
           function updatePopAd(images, corr_bool) {
+            if (typeof Swiper === 'undefined') {
+              loadSwiperScript()
+                .then(function () {
+                  updatePopAd(images, corr_bool)
+                })
+                .catch(function (err) {
+                  console.error(err)
+                })
+              return
+            }
             // 直接使用原始商品，讓 Swiper 自動處理不足的情況
             let displayImages = images;
             

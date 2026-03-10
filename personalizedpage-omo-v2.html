@@ -389,6 +389,30 @@
         color: #4a4a4a;
       }
 
+      .pid-size-loading-overlay__cta {
+        appearance: none;
+        border: 1px solid rgba(0, 0, 0, 0.14);
+        background: rgba(255, 255, 255, 0.96);
+        color: #1e1e19;
+        font-size: 14px;
+        font-weight: 600;
+        border-radius: 999px;
+        padding: 10px 16px;
+        font-family: 'Noto Sans TC', sans-serif;
+        cursor: pointer;
+        transition: transform 0.12s ease, box-shadow 0.12s ease, background 0.12s ease;
+        box-shadow: 0 10px 24px rgba(0, 0, 0, 0.12);
+      }
+
+      .pid-size-loading-overlay__cta:hover {
+        transform: translateY(-1px);
+      }
+
+      .pid-size-loading-overlay__cta:active {
+        transform: translateY(0);
+        box-shadow: 0 8px 18px rgba(0, 0, 0, 0.14);
+      }
+
       @keyframes pid-badge-fadein {
         from { opacity: 0; transform: translateY(6px); }
         to   { opacity: 1; transform: translateY(0); }
@@ -4220,7 +4244,7 @@
 
           // 獲取 ANN'S 兩階段推薦
           if (brandUpper === 'ANNS') {
-            fetchTwoStageRecommendations();
+            // 等到收到 bid（由 iframe message 傳入）才開始第一階段 API 推薦
           }
           
           // 啟動圖片監聽器，監聽推薦區塊圖片變化並即時更新 mail-section
@@ -7120,6 +7144,10 @@
       function fetchTwoStageRecommendations(providedBid) {
         // console.log('🚀 開始 ANN\'S 兩階段推薦流程...');
 
+        if (!providedBid) {
+          return
+        }
+
         const currentBid = providedBid || (fakeData && fakeData.bid) || {
           HV: "24.1", WV: "5", CC: "", DataItem: "2010", ClothSize: "",
           GVID: "INF", Sizes: "", Brand: "ANNS", ml_out: "", Hip: "1-cm",
@@ -7146,7 +7174,7 @@
           Brand: "ANNS",
           LGVID: "x",
           MRID: "",
-          recom_num: "6",
+          recom_num: "200",
           PID: params.get('pid') || "8271316",
           DataItem_MD: "1",
           bid: currentBid
@@ -7158,6 +7186,14 @@
           body: JSON.stringify(requestData)
         };
 
+        function chunkArray(arr, size) {
+          const chunks = []
+          for (let i = 0; i < arr.length; i += size) {
+            chunks.push(arr.slice(i, i + size))
+          }
+          return chunks
+        }
+
         // 第一階段：不包含 SIZEAI，快速獲取推薦清單
         // console.log('📡 第一階段：獲取推薦清單...');
         let initialEdm = [];
@@ -7167,7 +7203,7 @@
             if (!data.bhv || data.bhv.length === 0) return;
             
             // 轉換為 Product_Recommendation 格式
-            initialEdm = data.bhv.map(item => ({
+            initialEdm = data.bhv.slice(0, 100).map(item => ({
               ...item,
               price: item.price ? item.price.toString() : '0',
               sale_price: item.sale_price ? item.sale_price.toString() : null
@@ -7191,144 +7227,176 @@
             const secondStagePromises = Object.entries(groupsByType).map(([typeId, groupItems], index) => {
               const containerId = `anns-recommendations-${index}`
 
-              // 只針對該輪播內的商品建立 bhv list
-              const groupBhvList = groupItems.map(item => ({
+              const groupBhvListAll = groupItems.map(item => ({
                 pid: item.pid,
                 dbid: item.dbid,
                 dataitem_typeid: item.dataitem_typeid
               }))
 
-              if (!groupBhvList.length) return Promise.resolve()
+              if (!groupBhvListAll.length) return Promise.resolve()
 
-              const secondStageData = {
-                ...requestData,
-                SIZEAI: 'True',
-                SIZEAI_ptr: 'bhv',
-                SIZEAI_bhv_list: groupBhvList
+              const targetCount = 12
+              const batchSize = 20
+              const batches = chunkArray(groupBhvListAll, batchSize)
+
+              const groupItemByPid = groupItems.reduce((acc, item) => {
+                const pid = item && item.pid ? String(item.pid) : ''
+                if (pid) acc[pid] = item
+                return acc
+              }, {})
+
+              const collected = []
+              const collectedPidSet = new Set()
+
+              function fetchNextBatch(batchIndex) {
+                if (collected.length >= targetCount) return Promise.resolve()
+                if (batchIndex >= batches.length) return Promise.resolve()
+
+                const groupBhvList = batches[batchIndex]
+                const secondStageData = {
+                  ...requestData,
+                  recom_num: "20",
+                  SIZEAI: 'True',
+                  SIZEAI_ptr: 'bhv',
+                  SIZEAI_bhv_list: groupBhvList
+                }
+
+                return fetch(secondStageUrl, {
+                  ...options,
+                  body: JSON.stringify(secondStageData)
+                })
+                  .then(res => (res ? res.json() : null))
+                  .then(response => {
+                    if (!response || !response.SIZEAI_result) {
+                      return fetchNextBatch(batchIndex + 1)
+                    }
+
+                    const sizeMap = {}
+                    const validProductIdSet = new Set()
+
+                    response.SIZEAI_result.forEach((item) => {
+                      if (!item || Object.keys(item).length === 0) return
+
+                      if (!item.error && !item.filter_reason && item.productid) {
+                        validProductIdSet.add(String(item.productid))
+                      }
+
+                      if (item.best_size && item.productid) {
+                        sizeMap[String(item.productid)] = item.best_size
+                      } else if (item.ITEM && item.ITEM !== '{}' && item.productid) {
+                        try {
+                          const scores = JSON.parse(item.ITEM)
+                          const bestSize = Object.entries(scores)
+                            .map(([s, p]) => [s, parseFloat(p)])
+                            .sort((a, b) => b[1] - a[1])[0][0]
+                          sizeMap[String(item.productid)] = bestSize
+                        } catch (e) {}
+                      }
+                    })
+
+                    groupBhvList.forEach((reqItem) => {
+                      const pid = reqItem && reqItem.pid ? String(reqItem.pid) : ''
+                      if (!pid) return
+                      if (collected.length >= targetCount) return
+                      if (!validProductIdSet.has(pid)) return
+                      if (collectedPidSet.has(pid)) return
+
+                      const original = groupItemByPid[pid]
+                      if (!original) return
+
+                      const nextItem = {
+                        ...original,
+                        size_tag: sizeMap[pid] || original.size_tag
+                      }
+                      collected.push(nextItem)
+                      collectedPidSet.add(pid)
+                    })
+
+                    return fetchNextBatch(batchIndex + 1)
+                  })
+                  .catch((err) => {
+                    console.error(`❌ ANNS SIZEAI Error (type: ${typeId}):`, err)
+                    return fetchNextBatch(batchIndex + 1)
+                  })
               }
 
-              return fetch(secondStageUrl, {
-                ...options,
-                body: JSON.stringify(secondStageData)
+              return fetchNextBatch(0).then(() => {
+                const containerEl = document.getElementById(containerId)
+                if (!containerEl) return
+
+                if (collected.length > 0) {
+                  const renderConfig = {
+                    brand: "ANNS",
+                    containerId,
+                    backgroundColor: 'transparent',
+                    title: '',
+                    customPadding: '0px',
+                    arrowPosition: 'center',
+                    autoplay: false,
+                    hide_size: true,
+                    hide_discount: true,
+                    ctype_val: [],
+                    bid: currentBid,
+                    breakpoints: {
+                      768: {
+                        slidesPerView: 4,
+                        slidesPerGroup: 4,
+                        spaceBetween: 24,
+                        grid: { rows: 1, fill: 'row' }
+                      },
+                      0: {
+                        slidesPerView: 2.5,
+                        slidesPerGroup: 2,
+                        spaceBetween: 12,
+                        grid: { rows: 1, fill: 'row' }
+                      }
+                    },
+                    customEdm: collected.slice(0, targetCount)
+                  }
+                  window.Product_Recommendation(renderConfig)
+                }
+
+                const wrapper = containerEl.parentElement
+                if (wrapper) {
+                  const overlay = wrapper.querySelector(
+                    `.pid-size-loading-overlay[data-size-overlay-for=\"${containerId}\"]`
+                  )
+                  if (overlay) {
+                    if (collected.length >= targetCount) {
+                      overlay.remove()
+                    } else {
+                      overlay.innerHTML = `
+                        <button type="button" class="pid-size-loading-overlay__cta">點擊瀏覽更多商品</button>
+                      `
+                      if (!overlay.getAttribute('data-cta-bound')) {
+                        overlay.setAttribute('data-cta-bound', '1')
+                        overlay.addEventListener('click', function (e) {
+                          const btn = e.target && e.target.closest ? e.target.closest('.pid-size-loading-overlay__cta') : null
+                          if (!btn) return
+                          overlay.remove()
+                        })
+                      }
+                    }
+                  }
+
+                  if (!wrapper.querySelector('.pid-size-success-badge') && collected.length > 0 && collected.length >= targetCount) {
+                    const badge = document.createElement('div')
+                    badge.className = 'pid-size-success-badge'
+                    badge.innerHTML = `
+                      <div class="pid-size-success-badge__icon">
+                        <img src="https://inffits.com/webDesign/HTML/img/inffits_black_logo.svg" alt="infFITS" />
+                      </div>
+                      <p class="pid-size-success-badge__text">
+                        <span class="pid-size-success-badge__text--desktop">以下商品都有適合您的尺寸，並且還有庫存！</span>
+                        <span class="pid-size-success-badge__text--mobile">以上商品都有適合您的尺寸，並且還有庫存！</span>
+                      </p>
+                    `
+                    setTimeout(() => {
+                      wrapper.appendChild(badge)
+                    }, 300);
+                  }
+                }
               })
-                .then(res => (res ? res.json() : null))
-                .then(response => {
-                  if (!response || !response.SIZEAI_result) return
-
-                  console.log(`=== 第二階段返回結果（SIZEAI，類別: ${typeId}）===`)
-                  console.log(JSON.stringify(response, null, 2))
-
-                  const totalItems = response.SIZEAI_result.length
-                  const validItems = response.SIZEAI_result.filter(
-                    (item) =>
-                      item && Object.keys(item).length > 0 && !item.error && !item.filter_reason
-                  ).length
-                  const filteredItems = response.SIZEAI_result.filter(
-                    (item) => item && item.filter_reason
-                  ).length
-
-                  console.log('\n=== 資料統計 ===')
-                  console.log(`總筆數: ${totalItems}`)
-                  console.log(`有庫存筆數: ${validItems}`)
-                  console.log(`無庫存筆數: ${filteredItems}`)
-                  if (totalItems > 0) {
-                    console.log(
-                      `有庫存率: ${((validItems / totalItems) * 100).toFixed(2)}%`
-                    )
-                  }
-
-                  if (validItems > 0) {
-                    const validProductIds = response.SIZEAI_result
-                      .filter((item) => item && !item.error && !item.filter_reason)
-                      .map((item) => item.productid)
-                    console.log(`\n有庫存商品 PID 列表 (${validItems} 筆):`)
-                    console.log(JSON.stringify(validProductIds, null, 2))
-                  }
-
-                  const sizeMap = {}
-                  response.SIZEAI_result.forEach((item) => {
-                    if (!item) return
-                    if (item.best_size) {
-                      sizeMap[item.productid] = item.best_size
-                    } else if (item.ITEM && item.ITEM !== '{}') {
-                      try {
-                        const scores = JSON.parse(item.ITEM)
-                        const bestSize = Object.entries(scores)
-                          .map(([s, p]) => [s, parseFloat(p)])
-                          .sort((a, b) => b[1] - a[1])[0][0]
-                        sizeMap[item.productid] = bestSize
-                      } catch (e) {}
-                    }
-                  })
-
-                  // 僅更新該輪播容器內的商品
-                  const containerEl = document.getElementById(containerId)
-                  if (!containerEl) return
-
-                  const slides = containerEl.querySelectorAll('.embeddedItem')
-                  let appliedCount = 0
-
-                  slides.forEach((slide) => {
-                    const pid = slide.getAttribute('data-pid')
-                    if (pid && sizeMap[pid]) {
-                      const imgBox = slide.querySelector('.embeddedItem__imgBox')
-                      if (imgBox && !imgBox.querySelector('.embeddedItem__sizeTag')) {
-                        const tag = document.createElement('div')
-                        tag.className = 'embeddedItem__sizeTag'
-                        tag.style.opacity = '0'
-                        tag.style.transition = 'opacity 0.3s ease-in'
-                        tag.textContent = sizeMap[pid]
-                        imgBox.appendChild(tag)
-                        appliedCount += 1
-                        setTimeout(() => {
-                          tag.style.opacity = '1'
-                        }, 50)
-                      }
-                    }
-                  })
-
-                  // 若該輪播至少有一個商品成功掛上尺寸標籤，移除該輪播上的 loading 遮罩，並顯示成功提示
-                  if (appliedCount > 0) {
-                    const wrapper = containerEl.parentElement
-                    if (wrapper) {
-                      const overlay = wrapper.querySelector(
-                        `.pid-size-loading-overlay[data-size-overlay-for=\"${containerId}\"]`
-                      )
-                      if (overlay) {
-                        overlay.remove()
-                      }
-
-                      if (!wrapper.querySelector('.pid-size-success-badge')) {
-                        const badge = document.createElement('div')
-                        badge.className = 'pid-size-success-badge'
-                        badge.innerHTML = `
-                          <div class="pid-size-success-badge__icon">
-                            <img src="https://inffits.com/webDesign/HTML/img/inffits_black_logo.svg" alt="infFITS" />
-                          </div>
-                          <p class="pid-size-success-badge__text">
-                            <span class="pid-size-success-badge__text--desktop">以下商品都有適合您的尺寸，並且還有庫存！</span>
-                            <span class="pid-size-success-badge__text--mobile">以上商品都有適合您的尺寸，並且還有庫存！</span>
-                          </p>
-                        `
-                        setTimeout(() => {
-                          wrapper.appendChild(badge)
-                        }, 300);
-                      }
-                    }
-                  }
-
-                  // 顯示執行時間（僅記錄一次即可）
-                  if (response.SIZEAI_duration) {
-                    console.log(
-                      `\nSIZEAI 執行時間（類別 ${typeId}）: ${response.SIZEAI_duration.toFixed(
-                        2
-                      )} 秒`
-                    )
-                  }
-                })
-                .catch((err) =>
-                  console.error(`❌ ANNS SIZEAI Error (type: ${typeId}):`, err)
-                )
             })
 
             return Promise.all(secondStagePromises).then(() => {

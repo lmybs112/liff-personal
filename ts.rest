@@ -849,6 +849,7 @@ Content-Type: application/json
 
 POST https://api.inffits.com/HTTP_pidinfo_cdp_product_recommendation/extension/recom_product
 Content-Type: application/json
+
 {
     "Brand": "ANNS",
     "LGVID": "x",
@@ -857,7 +858,99 @@ Content-Type: application/json
     "PID": "8271316",
     "DataItem_MD": "1",
     "bid": {
-
-       "SHOES_MODE": "1",
-    }
+        "HV": "25.5",
+        "WV": "10.0",
+        "CC": "",
+        "DataItem": "0211",
+        "Shoulder": "",
+        "UpChest": "",
+        "DnChest": "",
+        "Waist": "",
+        "Hip": "",
+        "Brand": "ANNS",
+        "ClothID": "",
+        "Sizes": "",
+        "FitP": "0,0,0,0",
+        "Gender": "F",
+        "FMLpath": "FMLSep",
+        "BUS": "0",
+        "GVID": "INF",
+        "LGVID": "INF",
+        "MRID": "INF",
+        "ga_id": "x",
+        "Pattern_Prefer": "0",
+        "SHOES_MODE": "1",
+        "FOOT_CIRCUM": "20",
+        "CALF_CIRCUM": "20"
+    },
+    "SIZEAI": "True",
+    "SIZEAI_ptr": "bhv",
+    "SIZEAI_bhv_list": [
+        {
+            "pid": "8075902",
+            "dbid": "ALL_尖頭鞋",
+            "dataitem_typeid": "尖頭鞋"
+        },
+        {
+            "pid": "8716403",
+            "dbid": "ALL_尖頭鞋",
+            "dataitem_typeid": "尖頭鞋"
+        },
+        {
+            "pid": "10605193",
+            "dbid": "ALL_尖頭鞋",
+            "dataitem_typeid": "尖頭鞋"
+        },
+        {
+            "pid": "10624879",
+            "dbid": "ALL_尖頭鞋",
+            "dataitem_typeid": "尖頭鞋"
+        },
+        {
+            "pid": "10514528",
+            "dbid": "ALL_尖頭鞋",
+            "dataitem_typeid": "尖頭鞋"
+        },
+        {
+            "pid": "6232844",
+            "dbid": "ALL_尖頭鞋",
+            "dataitem_typeid": "尖頭鞋"
+        },
+        {
+            "pid": "8075915",
+            "dbid": "ALL_尖頭鞋",
+            "dataitem_typeid": "尖頭鞋"
+        },
+        {
+            "pid": "6543187",
+            "dbid": "ALL_尖頭鞋",
+            "dataitem_typeid": "尖頭鞋"
+        },
+        {
+            "pid": "11074601",
+            "dbid": "ALL_尖頭鞋",
+            "dataitem_typeid": "尖頭鞋"
+        },
+        {
+            "pid": "10660915",
+            "dbid": "ALL_尖頭鞋",
+            "dataitem_typeid": "尖頭鞋"
+        },
+        {
+            "pid": "6918766",
+            "dbid": "ALL_尖頭鞋",
+            "dataitem_typeid": "尖頭鞋"
+        },
+        {
+            "pid": "7625410",
+            "dbid": "ALL_尖頭鞋",
+            "dataitem_typeid": "尖頭鞋"
+        },
+        {
+            "pid": "9251607",
+            "dbid": "ALL_尖頭鞋",
+            "dataitem_typeid": "尖頭鞋"
+        }
+    ]
 }
+
