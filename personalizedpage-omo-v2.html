@@ -429,6 +429,18 @@
         box-shadow: 0 8px 18px rgba(0, 0, 0, 0.14);
       }
 
+      .pid-size-recommend-more {
+        margin-top: 12px;
+        background: #1e1e19;
+        color: #fff;
+        border-color: #1e1e19;
+        box-shadow: 0 8px 18px rgba(0, 0, 0, 0.18);
+      }
+
+      .pid-size-recommend-more:hover {
+        background: #000;
+      }
+
       @keyframes pid-badge-fadein {
         from { opacity: 0; transform: translateY(6px); }
         to   { opacity: 1; transform: translateY(0); }
@@ -469,6 +481,14 @@
           margin-top: 0;
           z-index: 21;
           animation-name: pid-badge-fadein-desktop;
+        }
+
+        .pid-size-recommend-more {
+          position: absolute;
+          top: -55px;
+          right: 0px;
+          margin-top: 0;
+          z-index: 21;
         }
       }
 
@@ -7311,6 +7331,111 @@
         })
       }
 
+      function getAnnsRecommendMoreStore() {
+        if (!window.annsRecommendMoreStore) {
+          window.annsRecommendMoreStore = {}
+        }
+        return window.annsRecommendMoreStore
+      }
+
+      function renderAnnsRecommendationBatch(containerId, currentBid, products) {
+        if (!Array.isArray(products) || products.length === 0) return
+        const renderConfig = {
+          brand: "ANNS",
+          containerId,
+          backgroundColor: 'transparent',
+          title: '',
+          customPadding: '0px',
+          arrowPosition: 'center',
+          autoplay: false,
+          hide_size: true,
+          hide_discount: true,
+          ctype_val: [],
+          bid: currentBid,
+          breakpoints: {
+            768: {
+              slidesPerView: 4,
+              slidesPerGroup: 4,
+              spaceBetween: 24,
+              grid: { rows: 1, fill: 'row' }
+            },
+            0: {
+              slidesPerView: 2.5,
+              slidesPerGroup: 2,
+              spaceBetween: 12,
+              grid: { rows: 1, fill: 'row' }
+            }
+          },
+          customEdm: products
+        }
+        window.Product_Recommendation(renderConfig)
+      }
+
+      function refreshAnnsRecommendMoreButton(containerId) {
+        const store = getAnnsRecommendMoreStore()
+        const state = store[containerId]
+        const containerEl = document.getElementById(containerId)
+        if (!containerEl || !containerEl.parentElement) return
+
+        const wrapper = containerEl.parentElement
+        const selector = `.pid-size-recommend-more[data-recommend-more-for="${containerId}"]`
+        let button = wrapper.querySelector(selector)
+        const hasState =
+          state &&
+          Array.isArray(state.items) &&
+          state.items.length > 0 &&
+          Number.isFinite(state.pageSize) &&
+          state.pageSize > 0
+
+        if (!hasState || state.items.length <= state.pageSize) {
+          if (button) {
+            button.remove()
+          }
+          return
+        }
+
+        if (!button) {
+          button = document.createElement('button')
+          button.type = 'button'
+          button.className = 'pid-size-loading-overlay__cta pid-size-recommend-more'
+          button.setAttribute('data-recommend-more-for', containerId)
+          button.textContent = '推薦更多'
+          button.addEventListener('click', function () {
+            showNextAnnsRecommendationBatch(containerId)
+          })
+          wrapper.appendChild(button)
+        }
+
+        const hasMore = (state.pageIndex + 1) * state.pageSize < state.items.length
+        button.style.display = hasMore ? 'inline-flex' : 'none'
+      }
+
+      function showNextAnnsRecommendationBatch(containerId) {
+        const store = getAnnsRecommendMoreStore()
+        const state = store[containerId]
+        if (
+          !state ||
+          !Array.isArray(state.items) ||
+          state.items.length === 0 ||
+          !Number.isFinite(state.pageSize) ||
+          state.pageSize <= 0
+        ) {
+          return
+        }
+
+        const nextPageIndex = state.pageIndex + 1
+        const startIndex = nextPageIndex * state.pageSize
+        const nextBatch = state.items.slice(startIndex, startIndex + state.pageSize)
+        if (!nextBatch.length) {
+          refreshAnnsRecommendMoreButton(containerId)
+          return
+        }
+
+        renderAnnsRecommendationBatch(containerId, state.bid, nextBatch)
+        state.pageIndex = nextPageIndex
+        refreshAnnsRecommendMoreButton(containerId)
+      }
+
       // 新增函式：更新推薦元件的 bid 參數
       // ANN'S 專屬兩階段推薦函式
       function fetchTwoStageRecommendations(providedBid) {
@@ -7341,6 +7466,8 @@
         if (!currentBid.CALF_CIRCUM) {
           currentBid.CALF_CIRCUM = "20";
         }
+
+        window.annsRecommendMoreStore = {}
 
         const requestData = {
           Brand: "ANNS",
@@ -7484,6 +7611,7 @@
               }
 
               const targetCount = 12
+              const maxCollectCount = targetCount * 3
               const batchSize = 20
               const batches = chunkArray(groupBhvListAll, batchSize)
 
@@ -7497,7 +7625,7 @@
               const collectedPidSet = new Set()
 
               function fetchNextBatch(batchIndex) {
-                if (collected.length >= targetCount) return Promise.resolve()
+                if (collected.length >= maxCollectCount) return Promise.resolve()
                 if (batchIndex >= batches.length) return Promise.resolve()
 
                 // 第一輪不足時，更新 loading 文案為「擴大搜尋範圍」
@@ -7558,7 +7686,7 @@
                     groupBhvList.forEach((reqItem) => {
                       const pid = reqItem && reqItem.pid ? String(reqItem.pid) : ''
                       if (!pid) return
-                      if (collected.length >= targetCount) return
+                      if (collected.length >= maxCollectCount) return
                       if (!validProductIdSet.has(pid)) return
                       if (collectedPidSet.has(pid)) return
 
@@ -7592,35 +7720,13 @@
                 if (!containerEl) return
 
                 if (collected.length > 0) {
-                  const renderConfig = {
-                    brand: "ANNS",
-                    containerId,
-                    backgroundColor: 'transparent',
-                    title: '',
-                    customPadding: '0px',
-                    arrowPosition: 'center',
-                    autoplay: false,
-                    hide_size: true,
-                    hide_discount: true,
-                    ctype_val: [],
-                    bid: currentBid,
-                    breakpoints: {
-                      768: {
-                        slidesPerView: 4,
-                        slidesPerGroup: 4,
-                        spaceBetween: 24,
-                        grid: { rows: 1, fill: 'row' }
-                      },
-                      0: {
-                        slidesPerView: 2.5,
-                        slidesPerGroup: 2,
-                        spaceBetween: 12,
-                        grid: { rows: 1, fill: 'row' }
-                      }
-                    },
-                    customEdm: collected.slice(0, targetCount)
+                  renderAnnsRecommendationBatch(containerId, currentBid, collected.slice(0, targetCount))
+                  getAnnsRecommendMoreStore()[containerId] = {
+                    items: collected.slice(),
+                    pageSize: targetCount,
+                    pageIndex: 0,
+                    bid: currentBid
                   }
-                  window.Product_Recommendation(renderConfig)
                 }
 
                 const wrapper = containerEl.parentElement
@@ -7651,6 +7757,7 @@
                     }, 300);
                   }
                 }
+                refreshAnnsRecommendMoreButton(containerId)
               })
             })
 
@@ -7668,6 +7775,7 @@
               if (hasInsufficient) {
                 const fallbackSourceGroup = groupResults.find(function (r) { return r.collectedCount > 0 }) || groupResults[0]
                 const fallbackProducts = (fallbackSourceGroup && fallbackSourceGroup.groupItems) ? fallbackSourceGroup.groupItems : initialEdm
+                window.annsRecommendMoreStore = {}
                 renderFallbackSections(fallbackProducts, currentBid)
               }
 
