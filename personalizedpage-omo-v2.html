@@ -429,6 +429,67 @@
         box-shadow: 0 8px 18px rgba(0, 0, 0, 0.14);
       }
 
+      .pid-size-loading-overlay__status-link {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        width: 100%;
+        max-width: 400px;
+        padding: 20px 18px;
+        border-radius: 999px;
+        background: #f7f7f7;
+        box-shadow: 0 2px 8px rgba(0, 0, 0, 0.04);
+        text-decoration: none;
+        cursor: pointer;
+      }
+
+      .pid-size-loading-overlay__status-link:hover {
+        transform: translateY(-1px);
+      }
+
+      .pid-size-loading-overlay__status-link:active {
+        transform: translateY(0);
+      }
+
+      .pid-size-loading-overlay__status-icon {
+        width: 48px;
+        height: 48px;
+        border-radius: 999px;
+        background: #111111;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        flex-shrink: 0;
+      }
+
+      .pid-size-loading-overlay__status-icon-img {
+        width: 32px;
+        height: 32px;
+        display: block;
+        filter: invert(1) brightness(2);
+      }
+
+      .pid-size-loading-overlay__status-text {
+        display: flex;
+        flex-direction: column;
+        gap: 2px;
+      }
+
+      .pid-size-loading-overlay__status-title {
+        margin: 0;
+        color: #1e1e19;
+        font-size: 16px;
+        line-height: 24px;
+        font-weight: 600;
+      }
+
+      .pid-size-loading-overlay__status-subtitle {
+        margin: 0;
+        color: #6b6b6b;
+        font-size: 13px;
+        line-height: 18px;
+      }
+
       .pid-size-recommend-more {
         margin-top: 12px;
         background: #1e1e19;
@@ -511,6 +572,10 @@
       }
 
       @media (max-width: 768px) {
+        .pid-size-loading-overlay__status-link {
+          max-width: calc(100% - 24px);
+        }
+
         .pid-size-success-badge__text--desktop {
           display: none;
         }
@@ -7282,8 +7347,32 @@
           ctaLink.href = cfg.url
           ctaLink.target = '_blank'
           ctaLink.rel = 'noopener noreferrer'
-          ctaLink.className = 'pid-size-loading-overlay__cta'
-          ctaLink.textContent = '點擊瀏覽更多商品'
+          ctaLink.className = 'pid-size-loading-overlay__status-link'
+
+          var ctaIcon = document.createElement('span')
+          ctaIcon.className = 'pid-size-loading-overlay__status-icon'
+
+          var ctaIconImg = document.createElement('img')
+          ctaIconImg.src = 'https://inffits.com/webDesign/HTML/img/inffits_black_logo.svg'
+          ctaIconImg.alt = 'infFITS'
+          ctaIconImg.className = 'pid-size-loading-overlay__status-icon-img'
+          ctaIcon.appendChild(ctaIconImg)
+
+          var ctaText = document.createElement('span')
+          ctaText.className = 'pid-size-loading-overlay__status-text'
+
+          var ctaTitle = document.createElement('span')
+          ctaTitle.className = 'pid-size-loading-overlay__status-title'
+          ctaTitle.textContent = 'infFITS 已經完成查詢'
+
+          var ctaSubtitle = document.createElement('span')
+          ctaSubtitle.className = 'pid-size-loading-overlay__status-subtitle'
+          ctaSubtitle.textContent = '點此前往相關頁面'
+
+          ctaText.appendChild(ctaTitle)
+          ctaText.appendChild(ctaSubtitle)
+          ctaLink.appendChild(ctaIcon)
+          ctaLink.appendChild(ctaText)
 
           overlay.appendChild(ctaLink)
           wrapper.appendChild(container)
