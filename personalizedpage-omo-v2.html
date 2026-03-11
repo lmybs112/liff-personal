@@ -7563,7 +7563,7 @@
           Brand: "ANNS",
           LGVID: "x",
           MRID: "",
-          recom_num: "200",
+          recom_num: "100",
           PID: params.get('pid') || "8271316",
           DataItem_MD: "1",
           bid: currentBid
@@ -7700,7 +7700,7 @@
                 return Promise.resolve()
               }
 
-              const targetCount = 12
+              const targetCount = 6
               const maxCollectCount = targetCount * 3
               const batchSize = 20
               const batches = chunkArray(groupBhvListAll, batchSize)
