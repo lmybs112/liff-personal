@@ -7279,7 +7279,7 @@
         console.log(`🔍 從 personalized-recommendations 找到 ${personalizedItems.length} 個商品`)
         
         personalizedItems.forEach((item, index) => {
-          if (products.length >= 12) return // Flex Message Carousel 最多 12 個
+          if (products.length >= 6) return // Flex Message Carousel 最多 6 個
           
           const name = item.getAttribute('data-title') || item.querySelector('.embeddedItemInfo__title')?.textContent?.trim() || '精選商品'
           const link = item.getAttribute('data-link') || item.getAttribute('href') || '#'
@@ -7302,13 +7302,13 @@
         
         console.log(`📦 從 personalized-recommendations 收集到 ${products.length} 個商品`)
         
-        // 2. 如果不足 12 個，從 more-recommendations 補足
-        if (products.length < 12) {
+        // 2. 如果不足 6 個，從 more-recommendations 補足
+        if (products.length < 6) {
           const moreItems = document.querySelectorAll('#more-recommendations .embeddedItem')
           console.log(`🔍 從 more-recommendations 找到 ${moreItems.length} 個商品`)
           
           moreItems.forEach((item, index) => {
-            if (products.length >= 12) return // 已經足夠 12 個
+            if (products.length >= 6) return // 已經足夠 6 個
             
             const name = item.getAttribute('data-title') || item.querySelector('.embeddedItemInfo__title')?.textContent?.trim() || '精選商品'
             const link = item.getAttribute('data-link') || item.getAttribute('href') || '#'
