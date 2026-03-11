@@ -295,3 +295,7 @@
 {"location":"personalizedpage-omo-v2.html:7521","message":"group collected result","data":{"typeId":"★3M水洗真皮涼鞋","index":0,"collectedCount":18,"groupItemsCount":100},"timestamp":1773224196885,"runId":"run1","hypothesisId":"H1-H2"}
 {"location":"personalizedpage-omo-v2.html:7601","message":"Promise.all resolved - groupResults snapshot","data":{"groupResultsCount":1,"groups":[{"typeId":"★3M水洗真皮涼鞋","index":0,"collectedCount":18}]},"timestamp":1773224196891,"runId":"run1","hypothesisId":"H1-H2"}
 {"location":"personalizedpage-omo-v2.html:7603","message":"hasInsufficient check","data":{"hasInsufficient":false,"groupResultsCount":1},"timestamp":1773224196892,"runId":"run1","hypothesisId":"H2"}
+{"location":"personalizedpage-omo-v2.html:7430","message":"renderPidRecommendationSections called","data":{"groupCount":1},"timestamp":1773224372702,"runId":"post-fix","hypothesisId":"H1-H2"}
+{"location":"personalizedpage-omo-v2.html:7521","message":"group collected result","data":{"typeId":"真皮靴","index":0,"collectedCount":18,"groupItemsCount":100},"timestamp":1773224388748,"runId":"run1","hypothesisId":"H1-H2"}
+{"location":"personalizedpage-omo-v2.html:7601","message":"Promise.all resolved - groupResults snapshot","data":{"groupResultsCount":1,"groups":[{"typeId":"真皮靴","index":0,"collectedCount":18}]},"timestamp":1773224388760,"runId":"run1","hypothesisId":"H1-H2"}
+{"location":"personalizedpage-omo-v2.html:7603","message":"hasInsufficient check","data":{"hasInsufficient":false,"groupResultsCount":1},"timestamp":1773224388760,"runId":"run1","hypothesisId":"H2"}

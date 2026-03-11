@@ -7682,7 +7682,7 @@
         }
 
         setAnnsRecommendMoreButtonState(button, state && state.isFetchingMore)
-        button.style.display = 'inline-flex'
+        button.style.display = state && state.isFetchingMore ? 'none' : 'inline-flex'
       }
 
       function showNextAnnsRecommendationBatch(containerId) {
