@@ -547,7 +547,7 @@
                             // bottom:9.5px;
                             // right:9.5px;
                             bottom: 3%;
-                            right: 3%;
+                            left: 3%;
                             border-radius: 40px;
                             background: rgba(255, 255, 255, 0.70);
                             backdrop-filter: blur(6px);
@@ -570,7 +570,7 @@
                             #${containerId} .embeddedAdContainer .embeddedAdImgContainer .embeddedItem .embeddedItem__img .embeddedItem__sizeTag {
                               position:absolute;
                               bottom:12px;
-                              right:12px;
+                              left:12px;
                               border-radius: 40px;
                               background: rgba(255, 255, 255, 0.70);
                               backdrop-filter: blur(6px);display: flex;

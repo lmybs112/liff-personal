@@ -285,6 +285,17 @@
         }
       }
 
+      @keyframes tryon-status-fadeout-down {
+        0% {
+          opacity: 1;
+          transform: translateY(0);
+        }
+        100% {
+          opacity: 0;
+          transform: translateY(12px);
+        }
+      }
+
       .tryon-status__icon {
         width: 48px;
         height: 48px;
@@ -320,7 +331,6 @@
         font-size: 16px;
         line-height: 24px;
         font-weight: 600;
-        font-family: 'Noto Sans TC', sans-serif;
       }
 
       .tryon-status__subtitle {
@@ -328,7 +338,12 @@
         color: #6b6b6b;
         font-size: 13px;
         line-height: 18px;
-        font-family: 'Noto Sans TC', sans-serif;
+      }
+
+      .tryon-status__subtitle--cta {
+        cursor: pointer;
+        text-decoration: underline;
+        text-underline-offset: 3px;
       }
 
       .tryon-status__spinner {
@@ -352,6 +367,7 @@
         position: absolute;
         inset: 0;
         background: rgba(253, 252, 247, 0.9);
+        /* background: rgba(246, 246, 246, 0.9); */
         backdrop-filter: blur(6px);
         display: flex;
         flex-direction: column;
@@ -2054,6 +2070,39 @@
         line-height: 22px;
         letter-spacing: 0.34px;
         text-align: center;
+      }
+
+      .recom-section__cta-btn {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        padding: 10px 24px;
+        border-radius: 999px;
+        border: 1.5px solid rgba(0, 0, 0, 0.18);
+        background: #fff;
+        color: #1e1e19;
+        font-family: 'Noto Sans TC', sans-serif;
+        font-size: 14px;
+        font-weight: 600;
+        letter-spacing: 0.02em;
+        text-decoration: none;
+        cursor: pointer;
+        transition: background 0.18s ease, transform 0.18s ease, box-shadow 0.18s ease;
+        box-shadow: 0 2px 8px rgba(0, 0, 0, 0.06);
+        margin-top: 4px;
+      }
+
+      .recom-section__cta-btn:hover {
+        background: #f5f5f0;
+        transform: translateY(-1px);
+        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+      }
+
+      @media screen and (min-width: 768px) {
+        .recom-section__cta-btn {
+          font-size: 16px;
+          padding: 12px 32px;
+        }
       }
 
       @media screen and (min-width: 768px) {
@@ -4439,6 +4488,16 @@
         const qrMetaButton = document.querySelector('.tryon-qr__meta #tryonScrollViewAll')
         if (qrMetaButton) {
           qrMetaButton.style.display = 'inline-flex'
+        }
+
+        if (window.__infTryonReinputRequested) {
+          window.__infTryonReinputRequested = false
+          // 淡出已在點擊時完成，這裡只確保狀態列確實隱藏
+          const statusEl = document.getElementById('tryonSizeStatus')
+          if (statusEl) {
+            statusEl.style.display = 'none'
+            statusEl.style.animation = ''
+          }
         }
         
         let member_id = "";
@@ -6988,41 +7047,32 @@
               updateProductRecommendationBid('more-recommendations', bid)
             }
             
-            // 顯示「已確認尺寸與庫存」狀態列
+            // 每次收到新 bid 時，先把狀態列文案重置回 loading 狀態，避免舊文案殘留
             const sizeStatus = document.getElementById('tryonSizeStatus')
             const sizeSpinner = document.getElementById('tryonSizeSpinner')
             if (sizeStatus) {
+              const statusTitleEl = sizeStatus.querySelector('.tryon-status__title')
+              const statusSubtitleEl = sizeStatus.querySelector('.tryon-status__subtitle')
+              if (statusTitleEl) {
+                statusTitleEl.textContent = 'infFITS 已經在為您確認尺寸與庫存'
+              }
+              if (statusSubtitleEl) {
+                statusSubtitleEl.textContent = '請稍候，為你更新個人化推薦'
+                statusSubtitleEl.classList.remove('tryon-status__subtitle--cta')
+                statusSubtitleEl.removeAttribute('data-reinput-bound')
+              }
+              if (sizeSpinner) {
+                sizeSpinner.style.display = ''
+              }
               setTimeout(() => {
                 sizeStatus.style.display = 'flex'
                 sizeStatus.style.animation = 'tryon-status-fadein-up 0.4s ease-out forwards'
-              },800)
+              }, 800)
             }
             // 收到 bid 並更新 payload 後才顯示動態 PID 推薦區塊，並以較柔和速度捲動至該區域（略留上方空間）
             const pidRecomRoot = document.getElementById('pid-recom-sections-root')
             if (pidRecomRoot) {
               pidRecomRoot.style.display = 'block'
-              setTimeout(() => {
-                const rect = pidRecomRoot.getBoundingClientRect()
-                const offset = 80 // 保留一點上方空間
-                const startY = window.pageYOffset || document.documentElement.scrollTop || 0
-                const targetY = rect.top + startY - offset
-                const distance = targetY - startY
-                const duration = 700
-                let startTime = null
-
-                function animateScroll(timestamp) {
-                  if (!startTime) startTime = timestamp
-                  const elapsed = timestamp - startTime
-                  const progress = Math.min(elapsed / duration, 1)
-                  const ease = 0.5 * (1 - Math.cos(Math.PI * progress)) // easeInOut
-                  window.scrollTo(0, startY + distance * ease)
-                  if (elapsed < duration) {
-                    requestAnimationFrame(animateScroll)
-                  }
-                }
-
-                requestAnimationFrame(animateScroll)
-              }, 400)
             }
             
             if (Brand.toUpperCase() === 'ANNS') {
@@ -7139,6 +7189,128 @@
         })
       }
       
+      // 數量不足時的 fallback：固定三組分類輪播（含導向按鈕）
+      function renderFallbackSections(fallbackProducts, currentBid) {
+        // #region agent log
+        console.log('[DBG H3] renderFallbackSections CALLED', { fallbackProductsCount: fallbackProducts ? fallbackProducts.length : 0 });
+        fetch('http://127.0.0.1:7243/ingest/00fd805d-ca8a-4150-8f7c-f7ecc3696417',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'personalizedpage-omo-v2.html:7214',message:'renderFallbackSections called',data:{fallbackProductsCount:fallbackProducts?fallbackProducts.length:0,currentBid},timestamp:Date.now(),runId:'run1',hypothesisId:'H3-H4'})}).catch(()=>{});
+        // #endregion
+        const root = document.getElementById('pid-recom-sections-root')
+        if (!root) return
+
+        root.innerHTML = ''
+        // #region agent log
+        console.log('[DBG H3] root cleared, childCount after =', root.children.length);
+        fetch('http://127.0.0.1:7243/ingest/00fd805d-ca8a-4150-8f7c-f7ecc3696417',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'personalizedpage-omo-v2.html:7218',message:'root cleared - innerHTML set to empty',data:{rootId:'pid-recom-sections-root',childCountAfterClear:root.children.length},timestamp:Date.now(),runId:'run1',hypothesisId:'H3'})}).catch(()=>{});
+        // #endregion
+
+        const FALLBACK_CONFIGS = [
+          {
+            title: '您會喜歡的全尺碼系列',
+            desc: 'Ann\'S 的經典 全尺碼 商品',
+            url: 'https://www.anns.tw/v2/official/SalePageCategory/9010?sortMode=Sales'
+          },
+          {
+            title: '您會喜歡的小尺寸專區',
+            desc: 'Ann\'S 的經典 小尺寸專區',
+            url: 'https://www.anns.tw/v2/official/SalePageCategory/567590?sortMode=Curator'
+          },
+          {
+            title: '您會喜歡的大尺碼專區',
+            desc: 'Ann\'S 的經典 大尺碼專區',
+            url: 'https://www.anns.tw/v2/official/SalePageCategory/555474?sortMode=Sales'
+          }
+        ]
+
+        FALLBACK_CONFIGS.forEach(function (cfg, index) {
+          var section = document.createElement('section')
+          section.className = 'recom-section'
+          section.id = 'pid-recom-section-fallback-' + index
+
+          var textSection = document.createElement('div')
+          textSection.className = 'text-section'
+
+          var titleEl = document.createElement('h2')
+          titleEl.textContent = cfg.title
+
+          var descEl = document.createElement('p')
+          descEl.textContent = cfg.desc
+
+          textSection.appendChild(titleEl)
+          textSection.appendChild(descEl)
+
+          var outer = document.createElement('div')
+          outer.className = 'w-full flex justify-center'
+
+          var inner = document.createElement('div')
+          inner.className = 'max-w-[1280px] mx-auto w-full'
+
+          var wrapper = document.createElement('div')
+          wrapper.style.position = 'relative'
+          wrapper.className = 'pid-recom-carousel-wrapper'
+
+          var container = document.createElement('div')
+          var containerId = 'anns-fallback-' + index
+          container.id = containerId
+          container.className = 'w-full'
+
+          // 遮罩 overlay（與 loading 狀態相同結構，文字換成連結按鈕）
+          var overlay = document.createElement('div')
+          overlay.className = 'pid-size-loading-overlay'
+
+          var ctaLink = document.createElement('a')
+          ctaLink.href = cfg.url
+          ctaLink.target = '_blank'
+          ctaLink.rel = 'noopener noreferrer'
+          ctaLink.className = 'pid-size-loading-overlay__cta'
+          ctaLink.textContent = '點擊瀏覽更多商品'
+
+          overlay.appendChild(ctaLink)
+          wrapper.appendChild(container)
+          wrapper.appendChild(overlay)
+          inner.appendChild(wrapper)
+          outer.appendChild(inner)
+          section.appendChild(textSection)
+          section.appendChild(outer)
+          root.appendChild(section)
+
+          if (index < FALLBACK_CONFIGS.length - 1) {
+            var hr = document.createElement('div')
+            hr.className = 'hr-section'
+            root.appendChild(hr)
+          }
+
+          window.Product_Recommendation({
+            brand: 'ANNS',
+            containerId: containerId,
+            backgroundColor: 'transparent',
+            title: '',
+            customPadding: '0px',
+            arrowPosition: 'center',
+            autoplay: false,
+            hide_size: true,
+            hide_discount: true,
+            ctype_val: [],
+            bid: currentBid,
+            breakpoints: {
+              768: {
+                slidesPerView: 4,
+                slidesPerGroup: 4,
+                spaceBetween: 24,
+                grid: { rows: 1, fill: 'row' }
+              },
+              0: {
+                slidesPerView: 2.5,
+                slidesPerGroup: 2,
+                spaceBetween: 12,
+                grid: { rows: 1, fill: 'row' }
+              }
+            },
+            customEdm: fallbackProducts
+          })
+        })
+      }
+
       // 新增函式：更新推薦元件的 bid 參數
       // ANN'S 專屬兩階段推薦函式
       function fetchTwoStageRecommendations(providedBid) {
@@ -7194,20 +7366,35 @@
           return chunks
         }
 
-        // 第一階段：不包含 SIZEAI，快速獲取推薦清單
+        // 第一階段：不包含 SIZEAI，快速獲取推薦清單（若 bhv 為空會重試一次）
         // console.log('📡 第一階段：獲取推薦清單...');
         let initialEdm = [];
-        fetch('https://api.inffits.com/HTTP_pidinfo_cdp_product_recommendation/extension/recom_product', options)
-          .then(res => res.json())
-          .then(data => {
-            if (!data.bhv || data.bhv.length === 0) return;
+
+        function fetchFirstStageOnce(isRetry) {
+          return fetch('https://api.inffits.com/HTTP_pidinfo_cdp_product_recommendation/extension/recom_product', options)
+            .then(res => res.json())
+            .then(data => {
+              if (!data.bhv || data.bhv.length === 0) {
+                if (!isRetry) {
+                  return fetchFirstStageOnce(true)
+                }
+                return null
+              }
             
-            // 轉換為 Product_Recommendation 格式
-            initialEdm = data.bhv.slice(0, 100).map(item => ({
+              // 轉換為 Product_Recommendation 格式
+              initialEdm = data.bhv.slice(0, 100).map(item => ({
               ...item,
               price: item.price ? item.price.toString() : '0',
               sale_price: item.sale_price ? item.sale_price.toString() : null
-            }));
+              }));
+
+              return data
+            })
+        }
+
+        fetchFirstStageOnce(false)
+          .then(data => {
+            if (!data) return;
 
             // 依 dataitem_typeid 分組，動態生成多個推薦區塊
             const groupsByType = {};
@@ -7219,10 +7406,42 @@
               groupsByType[key].push(item);
             });
 
+            // #region agent log
+            console.log('[DBG H1] renderPidRecommendationSections called at', Date.now())
+            fetch('http://127.0.0.1:7243/ingest/00fd805d-ca8a-4150-8f7c-f7ecc3696417',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'personalizedpage-omo-v2.html:7430',message:'renderPidRecommendationSections called',data:{groupCount:Object.keys(groupsByType).length},timestamp:Date.now(),runId:'post-fix',hypothesisId:'H1-H2'})}).catch(()=>{});
+            // #endregion
             renderPidRecommendationSections(groupsByType, currentBid)
+
+            // sections 已渲染至 DOM，用 rAF 確保 layout 計算完成後再滾動
+            requestAnimationFrame(function () {
+              var root = document.getElementById('pid-recom-sections-root')
+              if (!root) return
+              // #region agent log
+              var childCount = root.children.length
+              var rectTop = root.getBoundingClientRect().top
+              console.log('[DBG post-fix] scroll after render, childCount =', childCount, 'rect.top =', rectTop)
+              // #endregion
+              var offset = 80
+              var startY = window.pageYOffset || document.documentElement.scrollTop || 0
+              var targetY = rectTop + startY - offset
+              var distance = targetY - startY
+              var duration = 700
+              var startTime = null
+              function animateScroll(ts) {
+                if (!startTime) startTime = ts
+                var elapsed = ts - startTime
+                var progress = Math.min(elapsed / duration, 1)
+                var ease = 0.5 * (1 - Math.cos(Math.PI * progress))
+                window.scrollTo(0, startY + distance * ease)
+                if (elapsed < duration) requestAnimationFrame(animateScroll)
+              }
+              requestAnimationFrame(animateScroll)
+            })
 
             // 準備第二階段：依類別（輪播）分開呼叫 SIZEAI，一個輪播對應一個第二階段請求
             const secondStageUrl = 'https://api.inffits.com/HTTP_pidinfo_cdp_product_recommendation/extension/recom_product'
+
+            const groupResults = []
 
             const secondStagePromises = Object.entries(groupsByType).map(([typeId, groupItems], index) => {
               const containerId = `anns-recommendations-${index}`
@@ -7233,7 +7452,13 @@
                 dataitem_typeid: item.dataitem_typeid
               }))
 
-              if (!groupBhvListAll.length) return Promise.resolve()
+              if (!groupBhvListAll.length) {
+                // #region agent log
+                console.log('[DBG H1] group SKIPPED (empty bhv)', { typeId, index });
+                fetch('http://127.0.0.1:7243/ingest/00fd805d-ca8a-4150-8f7c-f7ecc3696417',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'personalizedpage-omo-v2.html:7433',message:'group skipped - empty bhv list (no push to groupResults)',data:{typeId,index},timestamp:Date.now(),runId:'run1',hypothesisId:'H1'})}).catch(()=>{});
+                // #endregion
+                return Promise.resolve()
+              }
 
               const targetCount = 12
               const batchSize = 20
@@ -7321,6 +7546,12 @@
               }
 
               return fetchNextBatch(0).then(() => {
+                groupResults.push({ typeId, index, groupItems, collectedCount: collected.length })
+                // #region agent log
+                console.log('[DBG H2] group result pushed', { typeId, index, collectedCount: collected.length, groupItemsCount: groupItems.length });
+                fetch('http://127.0.0.1:7243/ingest/00fd805d-ca8a-4150-8f7c-f7ecc3696417',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'personalizedpage-omo-v2.html:7521',message:'group collected result',data:{typeId,index,collectedCount:collected.length,groupItemsCount:groupItems.length},timestamp:Date.now(),runId:'run1',hypothesisId:'H1-H2'})}).catch(()=>{});
+                // #endregion
+
                 const containerEl = document.getElementById(containerId)
                 if (!containerEl) return
 
@@ -7400,10 +7631,92 @@
             })
 
             return Promise.all(secondStagePromises).then(() => {
+              // #region agent log
+              console.log('[DBG H2] Promise.all resolved - groupResults:', groupResults.map(r=>({typeId:r.typeId,index:r.index,collectedCount:r.collectedCount})));
+              fetch('http://127.0.0.1:7243/ingest/00fd805d-ca8a-4150-8f7c-f7ecc3696417',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'personalizedpage-omo-v2.html:7601',message:'Promise.all resolved - groupResults snapshot',data:{groupResultsCount:groupResults.length,groups:groupResults.map(r=>({typeId:r.typeId,index:r.index,collectedCount:r.collectedCount}))},timestamp:Date.now(),runId:'run1',hypothesisId:'H1-H2'})}).catch(()=>{});
+              // #endregion
+              // 若任一分類收集數量 < 5，切換 fallback 模式
+              const hasInsufficient = groupResults.some(function (r) { return r.collectedCount < 5 })
+              // #region agent log
+              console.log('[DBG H2] hasInsufficient =', hasInsufficient, '| counts:', groupResults.map(r=>r.collectedCount));
+              fetch('http://127.0.0.1:7243/ingest/00fd805d-ca8a-4150-8f7c-f7ecc3696417',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'personalizedpage-omo-v2.html:7603',message:'hasInsufficient check',data:{hasInsufficient,groupResultsCount:groupResults.length},timestamp:Date.now(),runId:'run1',hypothesisId:'H2'})}).catch(()=>{});
+              // #endregion
+              if (hasInsufficient) {
+                const fallbackSourceGroup = groupResults.find(function (r) { return r.collectedCount > 0 }) || groupResults[0]
+                const fallbackProducts = (fallbackSourceGroup && fallbackSourceGroup.groupItems) ? fallbackSourceGroup.groupItems : initialEdm
+                renderFallbackSections(fallbackProducts, currentBid)
+              }
+
+              const pendingOverlayTitle = Array.prototype.some.call(
+                document.querySelectorAll('.pid-size-loading-overlay__title'),
+                function (el) {
+                  return (
+                    el &&
+                    typeof el.textContent === 'string' &&
+                    el.textContent.indexOf('已經在為您確認尺寸與庫存') !== -1
+                  )
+                }
+              )
+              if (pendingOverlayTitle) {
+                return
+              }
+
               // 所有類別的第二階段處理完成後，移除頂部狀態列中的 loading spinner
               const sizeSpinner = document.getElementById('tryonSizeSpinner')
               if (sizeSpinner) {
                 sizeSpinner.style.display = 'none'
+              }
+
+              const sizeStatus = document.getElementById('tryonSizeStatus')
+              if (sizeStatus) {
+                const titleEl = sizeStatus.querySelector('.tryon-status__title')
+                if (titleEl) {
+                  titleEl.textContent = 'infFITS 已經為您完成推薦'
+                }
+
+                const subtitleEl = sizeStatus.querySelector('.tryon-status__subtitle')
+                if (subtitleEl) {
+                  subtitleEl.textContent = '點此「重新輸入」'
+                  subtitleEl.classList.add('tryon-status__subtitle--cta')
+
+                  if (!subtitleEl.getAttribute('data-reinput-bound')) {
+                    subtitleEl.setAttribute('data-reinput-bound', '1')
+                    subtitleEl.addEventListener('click', function () {
+                      const iframeEl = document.getElementById('inffits_ctryon_window')
+                      if (!iframeEl) return
+
+                      // 先播淡出動畫，完成後才清除輪播並重整 iframe
+                      const statusElForFade = document.getElementById('tryonSizeStatus')
+                      if (statusElForFade) {
+                        statusElForFade.style.animation = 'tryon-status-fadeout-down 0.35s ease-in forwards'
+                      }
+
+                      setTimeout(function () {
+                        if (statusElForFade) {
+                          statusElForFade.style.display = 'none'
+                          statusElForFade.style.animation = ''
+                        }
+
+                        // 清除並隱藏下方輪播區塊，恢復初始狀態
+                        const pidRecomRoot = document.getElementById('pid-recom-sections-root')
+                        if (pidRecomRoot) {
+                          pidRecomRoot.innerHTML = ''
+                          pidRecomRoot.style.display = 'none'
+                        }
+
+                        window.__infTryonReinputRequested = true
+
+                        const currentSrc = iframeEl.getAttribute('src')
+                        if (currentSrc) {
+                          iframeEl.setAttribute('src', currentSrc)
+                          if (typeof setupIframeErrorHandling === 'function') {
+                            setupIframeErrorHandling(iframeEl)
+                          }
+                        }
+                      }, 360)
+                    })
+                  }
+                }
               }
             })
           })
