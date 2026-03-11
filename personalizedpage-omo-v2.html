@@ -7366,6 +7366,34 @@
           return chunks
         }
 
+        function pickCategoryBalancedItems(list, limit) {
+          const groups = {}
+          ;(list || []).forEach(function (item) {
+            const key = item && item.dataitem_typeid ? String(item.dataitem_typeid) : '其他'
+            if (!groups[key]) groups[key] = []
+            groups[key].push(item)
+          })
+          const keys = Object.keys(groups)
+          if (!keys.length) return []
+
+          const picked = []
+          let cursor = 0
+          while (picked.length < limit) {
+            let advanced = false
+            for (let i = 0; i < keys.length && picked.length < limit; i++) {
+              const key = keys[i]
+              const bucket = groups[key]
+              if (bucket[cursor]) {
+                picked.push(bucket[cursor])
+                advanced = true
+              }
+            }
+            if (!advanced) break
+            cursor += 1
+          }
+          return picked
+        }
+
         // 第一階段：不包含 SIZEAI，快速獲取推薦清單（若 bhv 為空會重試一次）
         // console.log('📡 第一階段：獲取推薦清單...');
         let initialEdm = [];
@@ -7381,8 +7409,9 @@
                 return null
               }
             
-              // 轉換為 Product_Recommendation 格式
-              initialEdm = data.bhv.slice(0, 100).map(item => ({
+              // 轉換為 Product_Recommendation 格式（維持 100 筆，但避免單一類別壟斷）
+              const balancedBhv = pickCategoryBalancedItems(data.bhv, 100)
+              initialEdm = balancedBhv.map(item => ({
               ...item,
               price: item.price ? item.price.toString() : '0',
               sale_price: item.sale_price ? item.sale_price.toString() : null
