@@ -7430,6 +7430,15 @@
 
       function renderAnnsRecommendationBatch(containerId, currentBid, products) {
         if (!Array.isArray(products) || products.length === 0) return
+        let displayProducts = products
+        if (products.length > 0 && products.length < 12) {
+          const repeat = Math.ceil(12 / products.length)
+          const extended = []
+          for (let i = 0; i < repeat; i++) {
+            extended.push.apply(extended, products)
+          }
+          displayProducts = extended.slice(0, 12)
+        }
         const renderConfig = {
           brand: "ANNS",
           containerId,
@@ -7456,9 +7465,178 @@
               grid: { rows: 1, fill: 'row' }
             }
           },
-          customEdm: products
+          customEdm: displayProducts
         }
         window.Product_Recommendation(renderConfig)
+      }
+
+      function setAnnsRecommendMoreButtonState(button, isLoading) {
+        if (!button) return
+        button.disabled = false
+        button.textContent = '推薦更多'
+      }
+
+      function ensureAnnsLoadingOverlay(containerId, titleText) {
+        const containerEl = document.getElementById(containerId)
+        if (!containerEl || !containerEl.parentElement) return null
+
+        const wrapper = containerEl.parentElement
+        let overlay = wrapper.querySelector(
+          `.pid-size-loading-overlay[data-size-overlay-for="${containerId}"]`
+        )
+
+        if (!overlay) {
+          overlay = document.createElement('div')
+          overlay.className = 'pid-size-loading-overlay'
+          overlay.setAttribute('data-size-overlay-for', containerId)
+          wrapper.appendChild(overlay)
+        }
+
+        overlay.style.zIndex = '22'
+        overlay.innerHTML = `
+          <div class="pid-size-loading-overlay__spinner"></div>
+          <div class="pid-size-loading-overlay__text">
+            <p class="pid-size-loading-overlay__title">${titleText}</p>
+            <p class="pid-size-loading-overlay__subtitle">請稍候，為你更新個人化推薦</p>
+          </div>
+        `
+
+        return overlay
+      }
+
+      function removeAnnsLoadingOverlay(containerId) {
+        const containerEl = document.getElementById(containerId)
+        if (!containerEl || !containerEl.parentElement) return
+
+        const overlay = containerEl.parentElement.querySelector(
+          `.pid-size-loading-overlay[data-size-overlay-for="${containerId}"]`
+        )
+
+        if (overlay) {
+          overlay.remove()
+        }
+      }
+
+      function fetchMoreAnnsRecommendationItems(containerId) {
+        const store = getAnnsRecommendMoreStore()
+        const state = store[containerId]
+        if (
+          !state ||
+          state.isFetchingMore ||
+          state.completed ||
+          !Array.isArray(state.batches) ||
+          !state.batches.length
+        ) {
+          return Promise.resolve(false)
+        }
+
+        state.isFetchingMore = true
+        ensureAnnsLoadingOverlay(containerId, 'infFITS 正在為您擴大搜尋範圍')
+        refreshAnnsRecommendMoreButton(containerId)
+
+        const collectedPidSet = new Set(
+          (state.items || []).map(function (item) {
+            return item && item.pid ? String(item.pid) : ''
+          }).filter(Boolean)
+        )
+
+        function fetchNextRemainingBatch(batchIndex, addedCount) {
+          state.nextBatchIndex = batchIndex
+
+          if (addedCount >= state.pageSize) {
+            return Promise.resolve(addedCount > 0)
+          }
+
+          if (batchIndex >= state.batches.length) {
+            state.completed = true
+            return Promise.resolve(addedCount > 0)
+          }
+
+          const groupBhvList = state.batches[batchIndex]
+          const secondStageData = {
+            ...state.requestData,
+            recom_num: "20",
+            SIZEAI: 'True',
+            SIZEAI_ptr: 'bhv',
+            SIZEAI_bhv_list: groupBhvList
+          }
+
+          return fetch(state.secondStageUrl, {
+            method: 'POST',
+            headers: state.requestHeaders,
+            body: JSON.stringify(secondStageData)
+          })
+            .then(function (res) {
+              return res ? res.json() : null
+            })
+            .then(function (response) {
+              if (!response || !response.SIZEAI_result) {
+                return fetchNextRemainingBatch(batchIndex + 1, addedCount)
+              }
+
+              const sizeMap = {}
+              const validProductIdSet = new Set()
+
+              response.SIZEAI_result.forEach(function (item) {
+                if (!item || Object.keys(item).length === 0) return
+
+                if (!item.error && !item.filter_reason && item.productid) {
+                  validProductIdSet.add(String(item.productid))
+                }
+
+                if (item.best_size && item.productid) {
+                  sizeMap[String(item.productid)] = item.best_size
+                } else if (item.ITEM && item.ITEM !== '{}' && item.productid) {
+                  try {
+                    const scores = JSON.parse(item.ITEM)
+                    const bestSize = Object.entries(scores)
+                      .map(function (entry) { return [entry[0], parseFloat(entry[1])] })
+                      .sort(function (a, b) { return b[1] - a[1] })[0][0]
+                    sizeMap[String(item.productid)] = bestSize
+                  } catch (e) {}
+                }
+              })
+
+              groupBhvList.forEach(function (reqItem) {
+                const pid = reqItem && reqItem.pid ? String(reqItem.pid) : ''
+                if (!pid) return
+                if (!validProductIdSet.has(pid)) return
+                if (collectedPidSet.has(pid)) return
+
+                const original = state.groupItemByPid[pid]
+                if (!original) return
+
+                state.items.push({
+                  ...original,
+                  size_tag: sizeMap[pid] || original.size_tag
+                })
+                collectedPidSet.add(pid)
+                addedCount += 1
+              })
+
+              return fetchNextRemainingBatch(batchIndex + 1, addedCount)
+            })
+            .catch(function () {
+              return fetchNextRemainingBatch(batchIndex + 1, addedCount)
+            })
+        }
+
+        return fetchNextRemainingBatch(state.nextBatchIndex || 0, 0)
+          .then(function (addedAny) {
+            state.isFetchingMore = false
+            if (state.nextBatchIndex >= state.batches.length) {
+              state.completed = true
+            }
+            removeAnnsLoadingOverlay(containerId)
+            refreshAnnsRecommendMoreButton(containerId)
+            return addedAny
+          })
+          .catch(function () {
+            state.isFetchingMore = false
+            removeAnnsLoadingOverlay(containerId)
+            refreshAnnsRecommendMoreButton(containerId)
+            return false
+          })
       }
 
       function refreshAnnsRecommendMoreButton(containerId) {
@@ -7476,8 +7654,15 @@
           state.items.length > 0 &&
           Number.isFinite(state.pageSize) &&
           state.pageSize > 0
+        const hasRenderedMore = hasState && (state.pageIndex + 1) * state.pageSize < state.items.length
+        const canFetchMore =
+          hasState &&
+          !state.completed &&
+          Array.isArray(state.batches) &&
+          Number.isFinite(state.nextBatchIndex) &&
+          state.nextBatchIndex < state.batches.length
 
-        if (!hasState || state.items.length <= state.pageSize) {
+        if (!hasState || (!hasRenderedMore && !canFetchMore)) {
           if (button) {
             button.remove()
           }
@@ -7496,8 +7681,8 @@
           wrapper.appendChild(button)
         }
 
-        const hasMore = (state.pageIndex + 1) * state.pageSize < state.items.length
-        button.style.display = hasMore ? 'inline-flex' : 'none'
+        setAnnsRecommendMoreButtonState(button, state && state.isFetchingMore)
+        button.style.display = 'inline-flex'
       }
 
       function showNextAnnsRecommendationBatch(containerId) {
@@ -7517,7 +7702,21 @@
         const startIndex = nextPageIndex * state.pageSize
         const nextBatch = state.items.slice(startIndex, startIndex + state.pageSize)
         if (!nextBatch.length) {
-          refreshAnnsRecommendMoreButton(containerId)
+          fetchMoreAnnsRecommendationItems(containerId).then(function (addedAny) {
+            const latestState = getAnnsRecommendMoreStore()[containerId]
+            if (!latestState) return
+
+            const latestNextPageIndex = latestState.pageIndex + 1
+            const latestStartIndex = latestNextPageIndex * latestState.pageSize
+            const latestNextBatch = latestState.items.slice(latestStartIndex, latestStartIndex + latestState.pageSize)
+
+            if (addedAny && latestNextBatch.length) {
+              renderAnnsRecommendationBatch(containerId, latestState.bid, latestNextBatch)
+              latestState.pageIndex = latestNextPageIndex
+            }
+
+            refreshAnnsRecommendMoreButton(containerId)
+          })
           return
         }
 
@@ -7711,15 +7910,17 @@
                 return acc
               }, {})
 
-              const collected = []
+                const collected = []
               const collectedPidSet = new Set()
+                let nextBatchIndex = 0
 
               function fetchNextBatch(batchIndex) {
+                  nextBatchIndex = batchIndex
                 if (collected.length >= maxCollectCount) return Promise.resolve()
                 if (batchIndex >= batches.length) return Promise.resolve()
 
-                // 第一輪不足時，更新 loading 文案為「擴大搜尋範圍」
-                if (batchIndex > 0 && collected.length < targetCount) {
+                // 只要進入第二次（含）第二階 API，就更新 loading 文案為「擴大搜尋範圍」
+                if (batchIndex > 0) {
                   const containerElForTitle = document.getElementById(containerId)
                   if (containerElForTitle && containerElForTitle.parentElement) {
                     const overlayTitleEl = containerElForTitle.parentElement.querySelector(
@@ -7815,7 +8016,15 @@
                     items: collected.slice(),
                     pageSize: targetCount,
                     pageIndex: 0,
-                    bid: currentBid
+                    bid: currentBid,
+                    batches: batches,
+                    nextBatchIndex: nextBatchIndex,
+                    completed: nextBatchIndex >= batches.length,
+                    isFetchingMore: false,
+                    groupItemByPid: groupItemByPid,
+                    requestData: requestData,
+                    requestHeaders: options.headers,
+                    secondStageUrl: secondStageUrl
                   }
                 }
 
@@ -7825,7 +8034,9 @@
                     `.pid-size-loading-overlay[data-size-overlay-for=\"${containerId}\"]`
                   )
                   if (overlay) {
-                    if (collected.length >= 5) {
+                    // 只有在已達 targetCount（目前為 6）時才移除 loading 遮罩
+                    // 若僅有 5 筆，仍保留遮罩，讓後續第二批呼叫時可以更新文案為「擴大搜尋範圍」
+                    if (collected.length >= targetCount) {
                       overlay.remove()
                     }
                   }
