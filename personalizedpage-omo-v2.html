@@ -7069,12 +7069,12 @@
                 sizeStatus.style.animation = 'tryon-status-fadein-up 0.4s ease-out forwards'
               }, 800)
             }
-            // 收到 bid 並更新 payload 後才顯示動態 PID 推薦區塊，並以較柔和速度捲動至該區域（略留上方空間）
+            // 先顯示推薦區塊：分類輪播先出現，overlay 會在各分類第二階段完成後再移除
             const pidRecomRoot = document.getElementById('pid-recom-sections-root')
             if (pidRecomRoot) {
               pidRecomRoot.style.display = 'block'
             }
-            
+
             if (Brand.toUpperCase() === 'ANNS') {
               // 對於 ANNS，重新發送兩階段請求以更新 bid 相關推薦
               fetchTwoStageRecommendations(bid);
@@ -7440,19 +7440,13 @@
             fetch('http://127.0.0.1:7243/ingest/00fd805d-ca8a-4150-8f7c-f7ecc3696417',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'personalizedpage-omo-v2.html:7430',message:'renderPidRecommendationSections called',data:{groupCount:Object.keys(groupsByType).length},timestamp:Date.now(),runId:'post-fix',hypothesisId:'H1-H2'})}).catch(()=>{});
             // #endregion
             renderPidRecommendationSections(groupsByType, currentBid)
-
-            // sections 已渲染至 DOM，用 rAF 確保 layout 計算完成後再滾動
             requestAnimationFrame(function () {
               var root = document.getElementById('pid-recom-sections-root')
               if (!root) return
-              // #region agent log
-              var childCount = root.children.length
-              var rectTop = root.getBoundingClientRect().top
-              console.log('[DBG post-fix] scroll after render, childCount =', childCount, 'rect.top =', rectTop)
-              // #endregion
+              var rect = root.getBoundingClientRect()
               var offset = 80
               var startY = window.pageYOffset || document.documentElement.scrollTop || 0
-              var targetY = rectTop + startY - offset
+              var targetY = rect.top + startY - offset
               var distance = targetY - startY
               var duration = 700
               var startTime = null
@@ -7505,6 +7499,19 @@
               function fetchNextBatch(batchIndex) {
                 if (collected.length >= targetCount) return Promise.resolve()
                 if (batchIndex >= batches.length) return Promise.resolve()
+
+                // 第一輪不足時，更新 loading 文案為「擴大搜尋範圍」
+                if (batchIndex > 0 && collected.length < targetCount) {
+                  const containerElForTitle = document.getElementById(containerId)
+                  if (containerElForTitle && containerElForTitle.parentElement) {
+                    const overlayTitleEl = containerElForTitle.parentElement.querySelector(
+                      `.pid-size-loading-overlay[data-size-overlay-for="${containerId}"] .pid-size-loading-overlay__title`
+                    )
+                    if (overlayTitleEl) {
+                      overlayTitleEl.textContent = 'infFITS 正在為您擴大搜尋範圍'
+                    }
+                  }
+                }
 
                 const groupBhvList = batches[batchIndex]
                 const secondStageData = {
@@ -7622,20 +7629,8 @@
                     `.pid-size-loading-overlay[data-size-overlay-for=\"${containerId}\"]`
                   )
                   if (overlay) {
-                    if (collected.length >= targetCount) {
+                    if (collected.length >= 5) {
                       overlay.remove()
-                    } else {
-                      overlay.innerHTML = `
-                        <button type="button" class="pid-size-loading-overlay__cta">點擊瀏覽更多商品</button>
-                      `
-                      if (!overlay.getAttribute('data-cta-bound')) {
-                        overlay.setAttribute('data-cta-bound', '1')
-                        overlay.addEventListener('click', function (e) {
-                          const btn = e.target && e.target.closest ? e.target.closest('.pid-size-loading-overlay__cta') : null
-                          if (!btn) return
-                          overlay.remove()
-                        })
-                      }
                     }
                   }
 
@@ -7682,7 +7677,10 @@
                   return (
                     el &&
                     typeof el.textContent === 'string' &&
-                    el.textContent.indexOf('已經在為您確認尺寸與庫存') !== -1
+                    (
+                      el.textContent.indexOf('已經在為您確認尺寸與庫存') !== -1 ||
+                      el.textContent.indexOf('正在為您擴大搜尋範圍') !== -1
+                    )
                   )
                 }
               )
