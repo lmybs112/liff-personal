@@ -672,6 +672,20 @@
         align-items: center;
       }
 
+      .tryon-qr__image-link {
+        display: block;
+        width: 144px;
+        flex: 0 0 144px;
+        line-height: 0;
+        text-decoration: none;
+      }
+
+      .tryon-qr__image-link.tryon-qr__link--disabled,
+      .tryon-qr__name-link.tryon-qr__link--disabled {
+        pointer-events: none;
+        cursor: default;
+      }
+
       .tryon-qr__image {
         width: 144px;
         height: 144px;
@@ -698,6 +712,11 @@
         font-size: 18px;
         line-height: 24px;
         font-weight: 600;
+      }
+
+      .tryon-qr__name-link {
+        text-decoration: none;
+        color: inherit;
       }
 
       .tryon-qr__sku {
@@ -754,7 +773,7 @@
         padding-top: 100%;
         overflow: hidden;
         background: #f5f5f5;
-        touch-action: pan-x;
+        touch-action: pan-y;
         cursor: grab;
         user-select: none;
       }
@@ -1591,13 +1610,45 @@
       }
 
       @media screen and (max-width: 480px) {
+        .tryon-qr {
+          padding: 18px;
+          gap: 12px;
+          border-radius: 24px;
+        }
+        .tryon-qr__badge {
+          padding: 5px 12px;
+          font-size: 12px;
+        }
         .tryon-qr__body {
-          flex-direction: column;
+          flex-direction: row;
           width: 100%;
+          gap: 12px;
+          align-items: center;
+        }
+        .tryon-qr__image-link {
+          width: 112px;
+          flex: 0 0 112px;
         }
         .tryon-qr__image {
-          width: 100%;
-          height: auto;
+          width: 112px;
+          height: 112px;
+          border-radius: 16px;
+          padding: 6px;
+          flex: 0 0 112px;
+        }
+        .tryon-qr__meta {
+          gap: 6px;
+        }
+        .tryon-qr__name {
+          font-size: 16px;
+          line-height: 22px;
+        }
+        .tryon-qr__sku {
+          font-size: 12px;
+        }
+        .tryon-qr__cta {
+          padding: 8px 14px;
+          font-size: 13px;
         }
       }
 
@@ -4861,15 +4912,31 @@
                     <p class="tryon-qr__hint" style="display: none;">立即掃碼結帳獲取更多優惠。</p>
                   </div>
                   <div class="tryon-qr__body">
-                    <img
-                      id="tryonQrImage"
-                      class="tryon-qr__image"
-                      src=""
-                      alt="同步購物 QR code"
-                      loading="lazy"
-                    />
+                    <a
+                      id="tryonQrLink"
+                      class="tryon-qr__image-link tryon-qr__link--disabled"
+                      href="#"
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      aria-disabled="true"
+                    >
+                      <img
+                        id="tryonQrImage"
+                        class="tryon-qr__image"
+                        src=""
+                        alt="同步購物 QR code"
+                        loading="lazy"
+                      />
+                    </a>
                     <div class="tryon-qr__meta">
-                      <p class="tryon-qr__name" id="tryonProductName">載入專屬推薦中...</p>
+                      <a
+                        id="tryonProductName"
+                        class="tryon-qr__name tryon-qr__name-link tryon-qr__link--disabled"
+                        href="#"
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        aria-disabled="true"
+                      >載入專屬推薦中...</a>
                       <span class="tryon-qr__sku" id="tryonProductSku"></span>
                       <a
                         id="tryonProductLink"
@@ -5154,17 +5221,33 @@
         }
 
         const linkEl = document.getElementById('tryonProductLink')
+        const qrLinkEl = document.getElementById('tryonQrLink')
+        const nameLinkEl = document.getElementById('tryonProductName')
+        const linkedElements = [linkEl, qrLinkEl, nameLinkEl].filter(Boolean)
+        linkedElements.forEach((element) => {
+          element.removeEventListener('click', handleDisabledTryonLink)
+        })
         if (linkEl) {
-          linkEl.removeEventListener('click', handleDisabledTryonLink)
-          if (productLink) {
-            linkEl.href = productLink
+          linkEl.style.display = productLink ? 'inline-flex' : 'none'
+        }
+        if (productLink) {
+          linkedElements.forEach((element) => {
+            element.href = productLink
+            element.setAttribute('aria-disabled', 'false')
+            element.classList.remove('tryon-qr__link--disabled')
+          })
+          if (linkEl) {
             linkEl.classList.remove('tryon-qr__cta--disabled')
-            linkEl.setAttribute('aria-disabled', 'false')
-          } else {
-            linkEl.href = '#'
+          }
+        } else {
+          linkedElements.forEach((element) => {
+            element.href = '#'
+            element.setAttribute('aria-disabled', 'true')
+            element.classList.add('tryon-qr__link--disabled')
+            element.addEventListener('click', handleDisabledTryonLink)
+          })
+          if (linkEl) {
             linkEl.classList.add('tryon-qr__cta--disabled')
-            linkEl.setAttribute('aria-disabled', 'true')
-            linkEl.addEventListener('click', handleDisabledTryonLink)
           }
         }
 
@@ -5342,6 +5425,10 @@
        */
       function bindTryonCarouselDrag(viewport) {
         if (!viewport) return
+        let touchStartX = 0
+        let touchStartY = 0
+        let touchDirectionResolved = false
+        let touchDragActivated = false
 
         const handleStart = (clientX) => {
           if (tryonCarouselState.images.length <= 1) return
@@ -5454,22 +5541,45 @@
         // 觸摸事件
         viewport.addEventListener('touchstart', (e) => {
           if (e.touches.length === 1) {
-            handleStart(e.touches[0].clientX)
+            touchStartX = e.touches[0].clientX
+            touchStartY = e.touches[0].clientY
+            touchDirectionResolved = false
+            touchDragActivated = false
           }
         }, { passive: false })
 
         viewport.addEventListener('touchmove', (e) => {
-          if (tryonCarouselState.isDragging && e.touches.length === 1) {
+          if (e.touches.length !== 1) return
+
+          const currentTouch = e.touches[0]
+          const deltaX = currentTouch.clientX - touchStartX
+          const deltaY = currentTouch.clientY - touchStartY
+
+          if (!touchDirectionResolved) {
+            if (Math.abs(deltaX) < 8 && Math.abs(deltaY) < 8) return
+            touchDirectionResolved = true
+            if (Math.abs(deltaY) > Math.abs(deltaX)) {
+              return
+            }
+            handleStart(touchStartX)
+            touchDragActivated = true
+          }
+
+          if (touchDragActivated && tryonCarouselState.isDragging) {
             e.preventDefault()
-            handleMove(e.touches[0].clientX)
+            handleMove(currentTouch.clientX)
           }
         }, { passive: false })
 
         viewport.addEventListener('touchend', () => {
+          touchDirectionResolved = false
+          touchDragActivated = false
           handleEnd()
         })
 
         viewport.addEventListener('touchcancel', () => {
+          touchDirectionResolved = false
+          touchDragActivated = false
           handleEnd()
         })
       }
