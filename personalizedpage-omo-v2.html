@@ -424,8 +424,9 @@
       .pid-size-loading-overlay {
         position: absolute;
         inset: 0;
+        /* 確保 overlay 不小於 wrapper 的 min-height（absolute + inset:0 在 min-height 父層下可能取不到正確高度） */
+        min-height: inherit;
         background: rgba(253, 252, 247, 0.9);
-        /* background: rgba(246, 246, 246, 0.9); */
         backdrop-filter: blur(6px);
         display: flex;
         flex-direction: column;
@@ -433,6 +434,19 @@
         justify-content: center;
         gap: 8px;
         z-index: 20;
+        opacity: 1;
+        transition: opacity 0.35s ease;
+        pointer-events: auto;
+      }
+
+      .pid-size-loading-overlay--removing {
+        opacity: 0;
+        pointer-events: none;
+      }
+
+      @keyframes pid-carousel-skeleton-pulse {
+        0%, 100% { opacity: 0.55; }
+        50%       { opacity: 1; }
       }
 
       .pid-size-loading-overlay__spinner {
@@ -585,6 +599,35 @@
         display: flex;
         flex-direction: column;
         align-items: flex-start;
+        position: relative;
+        /* 預留空間：避免 overlay 因內容未載入而高度塌陷 */
+        min-height: 230px;
+      }
+
+      @media (min-width: 480px) {
+        .pid-recom-carousel-wrapper {
+          min-height: 290px;
+        }
+      }
+
+      @media (min-width: 768px) {
+        .pid-recom-carousel-wrapper {
+          min-height: 400px;
+        }
+      }
+
+      /* 讓直接子容器撐滿 wrapper，使 Swiper 內建 #recommendation-loading 也能垂直置中 */
+      .pid-recom-carousel-wrapper > .w-full {
+        flex: 1;
+        min-height: inherit;
+        display: flex;
+        flex-direction: column;
+      }
+
+      .pid-recom-carousel-wrapper #recommendation-loading {
+        flex: 1 !important;
+        height: auto !important;
+        min-height: inherit !important;
       }
 
       [data-arrows-hidden="true"] .swiper-next,
@@ -7307,6 +7350,9 @@
               updateProductRecommendationBid('more-recommendations', bid)
             }
             
+            // 記錄 bid 到達時間，供捲動邏輯計算最小等待時間
+            window.__annsBidReceivedAt = Date.now()
+
             // 每次收到新 bid 時，先把狀態列文案重置回 loading 狀態，避免舊文案殘留
             const sizeStatus = document.getElementById('tryonSizeStatus')
             const sizeSpinner = document.getElementById('tryonSizeSpinner')
@@ -7652,6 +7698,13 @@
           var container = document.getElementById(containerId)
           if (!container) return
           container.setAttribute('data-arrows-hidden', 'true')
+
+          // 數量不足時也停用觸摸滑動，避免用戶滑出範圍產生 bug
+          var swiperEl = container.querySelector('.swiper-basic-' + containerId)
+          if (swiperEl && swiperEl.swiper) {
+            swiperEl.swiper.allowTouchMove = false
+            swiperEl.swiper.params.allowTouchMove = false
+          }
         }, 400)
       }
 
@@ -7694,6 +7747,16 @@
         return overlay
       }
 
+      function fadeRemoveOverlay(overlay, onRemoved) {
+        if (!overlay || overlay.classList.contains('pid-size-loading-overlay--removing')) return
+        overlay.classList.add('pid-size-loading-overlay--removing')
+        var duration = parseFloat(getComputedStyle(overlay).transitionDuration || '0') * 1000 || 350
+        setTimeout(function () {
+          if (overlay.parentElement) overlay.remove()
+          if (typeof onRemoved === 'function') onRemoved()
+        }, duration + 20)
+      }
+
       function removeAnnsLoadingOverlay(containerId) {
         const containerEl = document.getElementById(containerId)
         if (!containerEl || !containerEl.parentElement) return
@@ -7704,12 +7767,13 @@
         )
 
         if (overlay) {
-          overlay.remove()
-        }
-
-        var successBadge = wrapper.querySelector('.pid-size-success-badge')
-        if (successBadge) {
-          successBadge.style.display = ''
+          var successBadge = wrapper.querySelector('.pid-size-success-badge')
+          fadeRemoveOverlay(overlay, function () {
+            if (successBadge) successBadge.style.display = ''
+          })
+        } else {
+          var successBadge = wrapper.querySelector('.pid-size-success-badge')
+          if (successBadge) successBadge.style.display = ''
         }
       }
 
@@ -8052,26 +8116,36 @@
             fetch('http://127.0.0.1:7243/ingest/00fd805d-ca8a-4150-8f7c-f7ecc3696417',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'personalizedpage-omo-v2.html:7430',message:'renderPidRecommendationSections called',data:{groupCount:Object.keys(groupsByType).length},timestamp:Date.now(),runId:'post-fix',hypothesisId:'H1-H2'})}).catch(()=>{});
             // #endregion
             renderPidRecommendationSections(groupsByType, currentBid)
-            requestAnimationFrame(function () {
-              var root = document.getElementById('pid-recom-sections-root')
-              if (!root) return
-              var rect = root.getBoundingClientRect()
-              var offset = 80
-              var startY = window.pageYOffset || document.documentElement.scrollTop || 0
-              var targetY = rect.top + startY - offset
-              var distance = targetY - startY
-              var duration = 700
-              var startTime = null
-              function animateScroll(ts) {
-                if (!startTime) startTime = ts
-                var elapsed = ts - startTime
-                var progress = Math.min(elapsed / duration, 1)
-                var ease = 0.5 * (1 - Math.cos(Math.PI * progress))
-                window.scrollTo(0, startY + distance * ease)
-                if (elapsed < duration) requestAnimationFrame(animateScroll)
-              }
-              requestAnimationFrame(animateScroll)
-            })
+
+            // 狀態列：bid 到達後 800ms 顯示、再跑 400ms 動畫 = 1200ms 才完成
+            // 捲動需等狀態列動畫播完，補足不足的時間（至少留 120ms buffer）
+            var SCROLL_MIN_DELAY_FROM_BID = 1350
+            var bidReceivedAt = window.__annsBidReceivedAt || Date.now()
+            var elapsed = Date.now() - bidReceivedAt
+            var scrollDelay = Math.max(0, SCROLL_MIN_DELAY_FROM_BID - elapsed)
+
+            setTimeout(function () {
+              requestAnimationFrame(function () {
+                var root = document.getElementById('pid-recom-sections-root')
+                if (!root) return
+                var rect = root.getBoundingClientRect()
+                var offset = 80
+                var startY = window.pageYOffset || document.documentElement.scrollTop || 0
+                var targetY = rect.top + startY - offset
+                var distance = targetY - startY
+                var duration = 700
+                var startTime = null
+                function animateScroll(ts) {
+                  if (!startTime) startTime = ts
+                  var elapsed = ts - startTime
+                  var progress = Math.min(elapsed / duration, 1)
+                  var ease = 0.5 * (1 - Math.cos(Math.PI * progress))
+                  window.scrollTo(0, startY + distance * ease)
+                  if (elapsed < duration) requestAnimationFrame(animateScroll)
+                }
+                requestAnimationFrame(animateScroll)
+              })
+            }, scrollDelay)
 
             // 準備第二階段：依類別（輪播）分開呼叫 SIZEAI，一個輪播對應一個第二階段請求
             const secondStageUrl = 'https://api.inffits.com/HTTP_pidinfo_cdp_product_recommendation/extension/recom_product'
@@ -8233,7 +8307,7 @@
                     // 只有在已達 targetCount（目前為 6）時才移除 loading 遮罩
                     // 若僅有 5 筆，仍保留遮罩，讓後續第二批呼叫時可以更新文案為「擴大搜尋範圍」
                     if (collected.length >= targetCount) {
-                      overlay.remove()
+                      fadeRemoveOverlay(overlay)
                     }
                   }
 
@@ -8279,13 +8353,13 @@
               const pendingOverlayTitle = Array.prototype.some.call(
                 document.querySelectorAll('.pid-size-loading-overlay__title'),
                 function (el) {
+                  if (!el || typeof el.textContent !== 'string') return false
+                  // 正在淡出（--removing）的 overlay 不算 pending
+                  const overlay = el.closest('.pid-size-loading-overlay')
+                  if (overlay && overlay.classList.contains('pid-size-loading-overlay--removing')) return false
                   return (
-                    el &&
-                    typeof el.textContent === 'string' &&
-                    (
-                      el.textContent.indexOf('已經在為您確認尺寸與庫存') !== -1 ||
-                      el.textContent.indexOf('正在為您擴大搜尋範圍') !== -1
-                    )
+                    el.textContent.indexOf('已經在為您確認尺寸與庫存') !== -1 ||
+                    el.textContent.indexOf('正在為您擴大搜尋範圍') !== -1
                   )
                 }
               )

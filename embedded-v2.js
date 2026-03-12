@@ -1432,8 +1432,10 @@
                       })
                     })
                   }
-                  $(`#${containerId} #recommendation-loading`).fadeOut(400, function () {
-                    $(`#${containerId} .embeddedAdContainer`).show()
+                  $(`#${containerId} #recommendation-loading`).fadeOut(300, function () {
+                    const $container = $(`#${containerId} .embeddedAdContainer`)
+                    $container.css({ display: 'block', opacity: 0 })
+                    $container.animate({ opacity: 1 }, 350)
                   })
                 },
   
