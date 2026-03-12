@@ -150,7 +150,39 @@
         width: 100%;
       }
       .tryon_section .text-section {
-        display: none;
+        display: flex;
+        flex-direction: column;
+        justify-content: center;
+        align-items: center;
+        width: 100%;
+        gap: 12px;
+      }
+      .tryon_section .text-section h2 {
+        color: #1e1e19;
+        text-align: center;
+        font-size: 24px;
+        line-height: 1.3;
+        letter-spacing: 0.02em;
+      }
+      .tryon_section .text-section p {
+        color: #787974;
+        text-align: center;
+        font-size: 14px;
+        font-weight: 400;
+        line-height: 1.4;
+      }
+      @media screen and (min-width: 768px) {
+        .tryon_section .text-section {
+          gap: 16px;
+        }
+        .tryon_section .text-section h2 {
+          font-size: 36px;
+          line-height: 1.25;
+        }
+        .tryon_section .text-section p {
+          font-size: 18px;
+          line-height: 1.45;
+        }
       }
       @media screen and (min-width: 1280px) {
         .tryon_section {
@@ -158,25 +190,15 @@
           gap: 64px;
         }
         .tryon_section .text-section {
-          display: flex;
-          flex-direction: column;
-          justify-content: center;
-          align-items: center;
-          width: 100%;
           gap: 24px;
         }
         .tryon_section .text-section h2 {
-          color: #1e1e19;
-          text-align: center;
           font-size: 51px;
           line-height: 56px;
           letter-spacing: 1.02px;
         }
         .tryon_section .text-section p {
-          color: #787974;
-          text-align: center;
           font-size: 28px;
-          font-weight: 400;
           line-height: 33px;
           letter-spacing: -0.56px;
         }
@@ -529,6 +551,14 @@
         align-items: flex-start;
       }
 
+      [data-arrows-hidden="true"] .swiper-next,
+      [data-arrows-hidden="true"] .swiper-prev,
+      [data-arrows-hidden="true"] .swiper-next-corr,
+      [data-arrows-hidden="true"] .swiper-prev-corr,
+      [data-arrows-hidden="true"] .title-navigation {
+        display: none !important;
+      }
+
       @keyframes pid-badge-fadein-desktop {
         from { opacity: 0; transform: translateY(-8px); }
         to   { opacity: 1; transform: translateY(0); }
@@ -657,6 +687,10 @@
         flex-direction: column;
         gap: 8px;
         flex: 1;
+      }
+
+      .tryon-qr__meta #tryonScrollViewAll {
+        display: none !important;
       }
 
       .tryon-qr__name {
@@ -4570,12 +4604,6 @@
           inlineGallery.style.opacity = '0'
         }
         
-        // iframe 載入成功時，顯示右側「查看更多穿搭靈感」按鈕
-        const qrMetaButton = document.querySelector('.tryon-qr__meta #tryonScrollViewAll')
-        if (qrMetaButton) {
-          qrMetaButton.style.display = 'inline-flex'
-        }
-
         if (window.__infTryonReinputRequested) {
           window.__infTryonReinputRequested = false
           // 淡出已在點擊時完成，這裡只確保狀態列確實隱藏
@@ -7236,7 +7264,7 @@
             title: '',
             customPadding: '0px',
             arrowPosition: 'center',
-            autoplay: false,
+            autoplay: items.length > 10,
             hide_size: true,
             hide_discount: true,
             ctype_val: [],
@@ -7397,7 +7425,7 @@
             title: '',
             customPadding: '0px',
             arrowPosition: 'center',
-            autoplay: false,
+            autoplay: (fallbackProducts && fallbackProducts.length > 10),
             hide_size: true,
             hide_discount: true,
             ctype_val: [],
@@ -7431,7 +7459,7 @@
       function renderAnnsRecommendationBatch(containerId, currentBid, products) {
         if (!Array.isArray(products) || products.length === 0) return
         let displayProducts = products
-        if (products.length > 0 && products.length < 12) {
+        if (products.length >= 5 && products.length < 12) {
           const repeat = Math.ceil(12 / products.length)
           const extended = []
           for (let i = 0; i < repeat; i++) {
@@ -7446,7 +7474,7 @@
           title: '',
           customPadding: '0px',
           arrowPosition: 'center',
-          autoplay: false,
+          autoplay: displayProducts.length > 10,
           hide_size: true,
           hide_discount: true,
           ctype_val: [],
@@ -7468,6 +7496,17 @@
           customEdm: displayProducts
         }
         window.Product_Recommendation(renderConfig)
+        hideAnnsCarouselArrowsIfFew(containerId, displayProducts.length)
+      }
+
+      function hideAnnsCarouselArrowsIfFew(containerId, itemCount) {
+        var minForArrows = 5
+        if (itemCount >= minForArrows) return
+        setTimeout(function () {
+          var container = document.getElementById(containerId)
+          if (!container) return
+          container.setAttribute('data-arrows-hidden', 'true')
+        }, 400)
       }
 
       function setAnnsRecommendMoreButtonState(button, isLoading) {
@@ -7501,6 +7540,11 @@
           </div>
         `
 
+        var successBadge = wrapper.querySelector('.pid-size-success-badge')
+        if (successBadge) {
+          successBadge.style.display = 'none'
+        }
+
         return overlay
       }
 
@@ -7508,12 +7552,18 @@
         const containerEl = document.getElementById(containerId)
         if (!containerEl || !containerEl.parentElement) return
 
-        const overlay = containerEl.parentElement.querySelector(
+        const wrapper = containerEl.parentElement
+        const overlay = wrapper.querySelector(
           `.pid-size-loading-overlay[data-size-overlay-for="${containerId}"]`
         )
 
         if (overlay) {
           overlay.remove()
+        }
+
+        var successBadge = wrapper.querySelector('.pid-size-success-badge')
+        if (successBadge) {
+          successBadge.style.display = ''
         }
       }
 

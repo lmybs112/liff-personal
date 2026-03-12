@@ -294,7 +294,7 @@
                           --inf-embedded-ad-dark-gray: #3B3B32;
                           --inf-embedded-ad-dark-red: #EB7454;
                           --inf-embedded-ad-light-gray: rgba(59, 59, 50, 0.30);
-                          --swiper-wrapper-transition-timing-function: liner !important;
+                          --swiper-wrapper-transition-timing-function: linear !important;
                           }
                           #${containerId} #recommendation-loading {
                             height: 131.71px;
@@ -1318,16 +1318,17 @@
               direction: 'horizontal',
               loop: true, // 啟用無限輪播
               pagination: false,
-              autoplay: !autoplay
-                ? false
-                : {
+              speed: autoplay ? 1100 : 750,
+              autoplay: autoplay
+                ? {
                     delay: 4000,
                     disableOnInteraction: false,
                     pauseOnMouseEnter: true,
                     // 重要：確保自動播放不會在切換頁面時出錯
                     stopOnLastSlide: false,
                     waitForTransition: true
-                  },
+                  }
+                : false,
   
               // 保持簡單的基礎設定
               slidesPerView: 1,
