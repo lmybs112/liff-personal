@@ -294,7 +294,7 @@
                           --inf-embedded-ad-dark-gray: #3B3B32;
                           --inf-embedded-ad-dark-red: #EB7454;
                           --inf-embedded-ad-light-gray: rgba(59, 59, 50, 0.30);
-                          --swiper-wrapper-transition-timing-function: linear !important;
+                          --swiper-wrapper-transition-timing-function: liner !important;
                           }
                           #${containerId} #recommendation-loading {
                             height: 131.71px;
@@ -1318,7 +1318,7 @@
               direction: 'horizontal',
               loop: true, // 啟用無限輪播
               pagination: false,
-              speed: autoplay ? 1100 : 750,
+              speed: 750,
               autoplay: autoplay
                 ? {
                     delay: 4000,
@@ -1343,8 +1343,13 @@
               },
   
               // 简化触摸设置以适应所有设备
+              allowTouchMove: true,
               simulateTouch: true,
               touchRatio: 1,
+              longSwipes: true,
+              longSwipesRatio: 0.4,
+              followFinger: true,
+              threshold: 10,
               resistance: true,
               resistanceRatio: 0.65,
   
