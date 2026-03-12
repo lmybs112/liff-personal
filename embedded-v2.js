@@ -41,6 +41,15 @@
             slidesPerView: 3,
             slidesPerGroup: 3,
             spaceBetween: 24,
+            speed: 750,
+            mousewheel: {
+              enabled: true,
+              sensitivity: 1
+            },
+            longSwipes: true,
+            longSwipesRatio: 0.4,
+            followFinger: true,
+            threshold: 10,
             loopFillGroupWithBlank: true // 確保桌面版也能正確填充
           },
           0: {
@@ -57,10 +66,31 @@
       const finalConfig = {
         ...defaultConfig,
         ...config,
-        breakpoints: {
+        breakpoints: Object.keys({
           ...defaultConfig.breakpoints,
           ...(config?.breakpoints || {})
-        }
+        }).reduce((acc, key) => {
+          acc[key] = {
+            ...(defaultConfig.breakpoints[key] || {}),
+            ...((config?.breakpoints || {})[key] || {})
+          }
+
+          if ((defaultConfig.breakpoints[key] || {}).grid || ((config?.breakpoints || {})[key] || {}).grid) {
+            acc[key].grid = {
+              ...((defaultConfig.breakpoints[key] || {}).grid || {}),
+              ...((((config?.breakpoints || {})[key] || {}).grid) || {})
+            }
+          }
+
+          if ((defaultConfig.breakpoints[key] || {}).mousewheel || ((config?.breakpoints || {})[key] || {}).mousewheel) {
+            acc[key].mousewheel = {
+              ...((defaultConfig.breakpoints[key] || {}).mousewheel || {}),
+              ...((((config?.breakpoints || {})[key] || {}).mousewheel) || {})
+            }
+          }
+
+          return acc
+        }, {})
       }
   
       // 解構出常用參數
