@@ -6547,6 +6547,17 @@
         event.preventDefault()
       }
 
+      function shouldUseShareUrlFormat() {
+        try {
+          const urlParams = new URLSearchParams(window.location.search)
+          const linkFormatParam = urlParams.get('linkFormat')
+          if (linkFormatParam === 'false' || linkFormatParam === '0') return false
+          return true
+        } catch (e) {
+          return true
+        }
+      }
+
       /**
        * URL 控制 CTA 背景圖縮放與 letterbox 底色（預設與未帶參數時皆為 cover）
        * - ctaBgSize：cover | contain（contain 時較不易裁到邊角 logo）
@@ -6979,9 +6990,14 @@
       }
 
       function generateProductHtml(images) {
+        const useShareUrlFormat = shouldUseShareUrlFormat()
+        const currentPageUrl = new URL(window.location.href)
         return images.slice(0, 6).map((img) => {
+          const shareUrl = new URL(currentPageUrl.toString())
+          shareUrl.searchParams.set('link', img.link || '')
+          const hrefValue = useShareUrlFormat ? shareUrl.toString() : (img.link || shareUrl.toString())
           return `
-                    <a class="embeddedItem" href="${img.link}" target="_blank" data-title="${img.title}" data-link="${img.link}" style="text-decoration: none; color: #333333; display: block; width: 100%; overflow: hidden;">
+                    <a class="embeddedItem" href="${hrefValue}" target="_blank" data-title="${img.title}" data-link="${img.link}" style="text-decoration: none; color: #333333; display: block; width: 100%; overflow: hidden;">
                         <div class="embeddedItem__img">
                             <div class="embeddedItem__imgBox" style="background-color: #efefef;height: 226px;width:226px">
                                 <img loading="lazy" src="${img.image_link}" alt="${img.description}" style="width: 100%; max-width: 100%; height: 100%; object-fit: cover; display: block;">
@@ -9264,11 +9280,13 @@
       function createFlexMessage(products) {
         // 取得當前頁面 URL 作為基礎 URL
         const currentPageUrl = new URL(window.location.href)
+        const useShareUrlFormat = shouldUseShareUrlFormat()
         
         const bubbles = products.map(product => {
           // 建立帶 link 參數的 URL（與網頁上點擊的商品連結格式一致）
           const shareUrl = new URL(currentPageUrl.toString())
           shareUrl.searchParams.set('link', product.link || '')
+          const uriValue = useShareUrlFormat ? shareUrl.toString() : (product.link || shareUrl.toString())
           
           return {
             type: 'bubble',
@@ -9312,7 +9330,7 @@
                   action: {
                     type: 'uri',
                     label: '查看商品',
-                    uri: shareUrl.toString()
+                    uri: uriValue
                   },
                   color: '#00C300'
                 }

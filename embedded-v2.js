@@ -108,6 +108,17 @@
         arrowPosition,
         customPadding
       } = finalConfig
+
+      function shouldUseShareUrlFormat() {
+        try {
+          const urlParams = new URLSearchParams(window.location.search)
+          const linkFormatParam = urlParams.get('linkFormat')
+          if (linkFormatParam === 'false' || linkFormatParam === '0') return false
+          return true
+        } catch (e) {
+          return true
+        }
+      }
       // console.error('Product_Recommendation bid', bid)
       // 轉換斷點為排序後的陣列
       const sortedBreakpoints = Object.keys(finalConfig.breakpoints)
@@ -1302,13 +1313,15 @@
             }
             
             const currentPageUrl = new URL(window.location.href);
+            const useShareUrlFormat = shouldUseShareUrlFormat()
             const items = displayImages
               .map((img) => {
                 const shareUrl = new URL(currentPageUrl.toString());
                 shareUrl.searchParams.set('link', img.link || '');
+                const hrefValue = useShareUrlFormat ? shareUrl.toString() : (img.link || shareUrl.toString())
                 return `
       <a class="embeddedItem swiper-slide" href="${
-        shareUrl.toString()
+        hrefValue
       }" target="_blank" data-title="${img.title}" data-link="${img.link}" data-pid="${img.pid || img.id || img.productid || ''}">
         <div class="embeddedItem__img" style="position:relative;">
         <div class="embeddedItem__imgBox" style="background-color:#efefef;">
