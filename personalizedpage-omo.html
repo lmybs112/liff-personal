@@ -5890,10 +5890,14 @@
         const bgImage = isMobile ? fakeData.coupon.img_mobile : fakeData.coupon.img_desktop
 
         const bgUrlOpts = resolveCtaBgUrlOptions()
+        const bgBaseColor =
+          bgUrlOpts.size === 'contain' && bgUrlOpts.letterboxColor ? bgUrlOpts.letterboxColor : 'lightgray'
         var imageLayer =
           "url('" +
           bgImage +
-          "') lightgray 50% / " +
+          "') " +
+          bgBaseColor +
+          ' 50% / ' +
           bgUrlOpts.size +
           ' no-repeat'
 
