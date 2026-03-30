@@ -6547,12 +6547,52 @@
         event.preventDefault()
       }
 
+      /**
+       * URL 控制 CTA 背景圖縮放與 letterbox 底色（預設與未帶參數時皆為 cover）
+       * - ctaBgSize：cover | contain（contain 時較不易裁到邊角 logo）
+       * - ctaBgColor：含 # 的色碼或 rgb()，例 ctaBgColor=%23f7f6f1
+       */
+      function resolveCtaBgUrlOptions() {
+        const urlParams = new URLSearchParams(window.location.search)
+        var size = (urlParams.get('ctaBgSize') || 'cover').trim().toLowerCase()
+        if (size !== 'contain' && size !== 'cover') {
+          size = 'cover'
+        }
+        var colorRaw = urlParams.get('ctaBgColor')
+        var color = ''
+        if (colorRaw != null && String(colorRaw).trim() !== '') {
+          try {
+            color = decodeURIComponent(String(colorRaw).trim())
+          } catch (e) {
+            color = String(colorRaw).trim()
+          }
+        }
+        if (size === 'contain' && !color) {
+          color = '#f7f6f1'
+        }
+        return { size: size, letterboxColor: color }
+      }
+
       function updateCouponBackground() {
         const couponContainerElement = document.querySelector('.cta-section')
         if (!couponContainerElement) return
 
         const isMobile = window.innerWidth <= 768
         const bgImage = isMobile ? fakeData.coupon.img_mobile : fakeData.coupon.img_desktop
+
+        const bgUrlOpts = resolveCtaBgUrlOptions()
+        var imageLayer =
+          "url('" +
+          bgImage +
+          "') lightgray 50% / " +
+          bgUrlOpts.size +
+          ' no-repeat'
+
+        if (bgUrlOpts.size === 'contain' && bgUrlOpts.letterboxColor) {
+          couponContainerElement.style.backgroundColor = bgUrlOpts.letterboxColor
+        } else {
+          couponContainerElement.style.backgroundColor = ''
+        }
 
         // 檢查 URL 參數是否要顯示遮罩（預設為 true，即顯示遮罩）
         const urlParams = new URLSearchParams(window.location.search)
@@ -6564,10 +6604,10 @@
           couponContainerElement.style.background = `
     linear-gradient(90deg, rgba(0, 0, 0, 0.2) 0%, rgba(0, 0, 0, 0) 48%),
     linear-gradient(0deg, rgba(0, 0, 0, 0.24) 0%, rgba(0, 0, 0, 0.24) 100%),
-    url('${bgImage}') lightgray 50% / cover no-repeat
+    ${imageLayer}
   `
         } else {
-          couponContainerElement.style.background = `url('${bgImage}') lightgray 50% / cover no-repeat`
+          couponContainerElement.style.background = imageLayer
         }
       }
 
