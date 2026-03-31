@@ -4202,12 +4202,6 @@
           inlineGallery.style.opacity = '0'
         }
         
-        // iframe 載入成功時，顯示右側「查看更多穿搭靈感」按鈕
-        const qrMetaButton = document.querySelector('.tryon-qr__meta #tryonScrollViewAll')
-        if (qrMetaButton) {
-          qrMetaButton.style.display = 'inline-flex'
-        }
-        
         let member_id = "";
         let given_id = "";
         let lgiven_id = "";
@@ -4334,12 +4328,6 @@
         const scrollGallery = document.querySelector('.tryon-scroll-gallery')
         if (scrollGallery) {
           scrollGallery.style.display = 'none'
-        }
-        
-        // 左側顯示「穿搭靈感推薦」時（fallback），隱藏右側「查看更多穿搭靈感」按鈕
-        const qrMetaButton = document.querySelector('.tryon-qr__meta #tryonScrollViewAll')
-        if (qrMetaButton) {
-          qrMetaButton.style.display = 'none'
         }
         
         renderTryonGalleryInline()
@@ -4742,7 +4730,7 @@
           element.removeEventListener('click', handleDisabledTryonLink)
         })
         if (linkEl) {
-          linkEl.style.display = productLink ? 'inline-flex' : 'none'
+          linkEl.style.display = 'none'
         }
         const resolvedProductHref = buildTryonProductHref(productLink)
         if (productLink) {

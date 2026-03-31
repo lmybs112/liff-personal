@@ -80,10 +80,40 @@
       arrowPosition,
       customPadding
     } = finalConfig
+    let resolvedRecommendMode = recommendMode
+
+    async function fetchBrandConfigRecommendMode() {
+      try {
+        const brandConfigResponse = await fetch('https://api.inffits.com/mkt_brand_config_proc/GetItems', {
+          method: 'POST',
+          headers: {
+            Accept: 'application/json',
+            'Content-Type': 'application/json'
+          },
+          body: JSON.stringify({ Brand: Brand })
+        })
+
+        if (!brandConfigResponse.ok) {
+          throw new Error(`品牌配置 API 調用失敗: ${brandConfigResponse.status}`)
+        }
+
+        const brandConfigResponseData = await brandConfigResponse.json()
+        const brandConfig = brandConfigResponseData.find(
+          (item) => item.Module === 'Product_Carousel_Widget'
+        )?.ConfigData?.Section_Info?.[0]
+
+        // RecommendMode: 變更 recommendMode
+        if (brandConfig && brandConfig.RecommendMode) {
+          resolvedRecommendMode = brandConfig.RecommendMode
+        }
+      } catch (error) {
+        console.error('獲取品牌配置時發生錯誤:', error)
+      }
+    }
 
     function getOrderedRecommendationItems(response) {
-      const modeList = recommendMode
-        ? recommendMode.split(',').map((item) => item.trim()).filter(Boolean)
+      const modeList = resolvedRecommendMode
+        ? resolvedRecommendMode.split(',').map((item) => item.trim()).filter(Boolean)
         : ['bhv']
 
       for (let i = 0; i < modeList.length; i++) {
@@ -1087,7 +1117,7 @@
             "series_out": "[\"成長型\"]",
             PID: ids.skuContent,
             SP_PID:"xxSOCIAL PROOF",
-            SIZEAI_ptr: recommendMode || 'bhv'
+            SIZEAI_ptr: resolvedRecommendMode || 'bhv'
           } :  brand.toLocaleUpperCase() === 'CLARKS' ? {
             Brand: Brand,
             LGVID: ids.lgiven_id,
@@ -1096,7 +1126,7 @@
             "series_out": "[\"女\"]",
             PID: ids.skuContent,
             SP_PID:"xxSOCIAL PROOF",
-            SIZEAI_ptr: recommendMode || 'bhv'
+            SIZEAI_ptr: resolvedRecommendMode || 'bhv'
           }:{
             Brand: Brand,
             LGVID: ids.lgiven_id,
@@ -1104,7 +1134,7 @@
             recom_num: '12', // 請求12個商品，確保數量充足
             PID: ids.skuContent,
             SP_PID:"xxSOCIAL PROOF",
-            SIZEAI_ptr: recommendMode || 'bhv'
+            SIZEAI_ptr: resolvedRecommendMode || 'bhv'
           }
           if (ctype_val && ctype_val.length > 0) {
             requestData.ctype_val = JSON.stringify(ctype_val)
@@ -1408,7 +1438,9 @@
       })(jQuery)
     }
     //jQuery loaded
-    ensureEmbeddedAdJQueryLoaded(loadEmbeddedScript)
+    fetchBrandConfigRecommendMode().finally(() => {
+      ensureEmbeddedAdJQueryLoaded(loadEmbeddedScript)
+    })
     // }
   }
   window.Product_Recommendation = Product_Recommendation
