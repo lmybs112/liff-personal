@@ -7,6 +7,7 @@
       customEdm: [],
       backgroundColor: '#fff', // 默認背景色為黑色
       title: '推薦您也可以這樣搭配', // 默認標題文字
+      recommendMode: 'bhv,corr,sp_atc,sp_trans',
       customPadding: null,
       arrowPosition: 'center', // 默認箭頭位置
       autoplay: true, // 默認開啓輪播
@@ -74,10 +75,30 @@
       bid,
       backgroundColor,
       title,
+      recommendMode,
       autoplay,
       arrowPosition,
       customPadding
     } = finalConfig
+
+    function getOrderedRecommendationItems(response) {
+      const modeList = recommendMode
+        ? recommendMode.split(',').map((item) => item.trim()).filter(Boolean)
+        : ['bhv']
+
+      for (let i = 0; i < modeList.length; i++) {
+        const key = modeList[i]
+        if (Array.isArray(response[key]) && response[key].length > 0) {
+          return response[key].map((item) => {
+            const newItem = Object.assign({}, item)
+            newItem.event_recom = key
+            return newItem
+          })
+        }
+      }
+
+      return []
+    }
 
     function shouldUseShareUrlFormat() {
       try {
@@ -1066,7 +1087,7 @@
             "series_out": "[\"成長型\"]",
             PID: ids.skuContent,
             SP_PID:"xxSOCIAL PROOF",
-            SIZEAI_ptr:"bhv"
+            SIZEAI_ptr: recommendMode || 'bhv'
           } :  brand.toLocaleUpperCase() === 'CLARKS' ? {
             Brand: Brand,
             LGVID: ids.lgiven_id,
@@ -1075,7 +1096,7 @@
             "series_out": "[\"女\"]",
             PID: ids.skuContent,
             SP_PID:"xxSOCIAL PROOF",
-            SIZEAI_ptr:"bhv"
+            SIZEAI_ptr: recommendMode || 'bhv'
           }:{
             Brand: Brand,
             LGVID: ids.lgiven_id,
@@ -1083,7 +1104,7 @@
             recom_num: '12', // 請求12個商品，確保數量充足
             PID: ids.skuContent,
             SP_PID:"xxSOCIAL PROOF",
-            SIZEAI_ptr:"bhv"
+            SIZEAI_ptr: recommendMode || 'bhv'
           }
           if (ctype_val && ctype_val.length > 0) {
             requestData.ctype_val = JSON.stringify(ctype_val)
@@ -1157,11 +1178,19 @@
                     item.size_tag = size_tag[item.id]
                   })
                 }
+                if (response['sp_atc']) {
+                  response['sp_atc'].forEach((item) => {
+                    item.size_tag = size_tag[item.id]
+                  })
+                }
+                if (response['sp_trans']) {
+                  response['sp_trans'].forEach((item) => {
+                    item.size_tag = size_tag[item.id]
+                  })
+                }
               }
 
-              //corr
-              //or let jsonData_corr = getRandomElements(response['corr'], 12).map((item) => {})
-              //bhv
+              const orderedRecommendationItems = getOrderedRecommendationItems(response)
               let jsonData =
                 customEdm && customEdm.length > 0
                   ? customEdm.map((item) => {
@@ -1175,8 +1204,8 @@
                       return newItem
                     })
                   : getRandomElements(
-                      response['bhv'],
-                      response['bhv'].length > 12 ? 12 : response['bhv'].length
+                      orderedRecommendationItems,
+                      orderedRecommendationItems.length > 12 ? 12 : orderedRecommendationItems.length
                     ).map((item) => {
                       let newItem = Object.assign({}, item)
                       newItem.sale_price = hide_discount
