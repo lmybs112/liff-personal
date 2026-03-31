@@ -7,6 +7,7 @@
       customEdm: [],
       backgroundColor: '#fff', // 默認背景色為黑色
       title: '推薦您也可以這樣搭配', // 默認標題文字
+      displayMode: 'SaleRate',
       recommendMode: 'bhv,corr,sp_atc,sp_trans',
       customPadding: null,
       arrowPosition: 'center', // 默認箭頭位置
@@ -75,12 +76,14 @@
       bid,
       backgroundColor,
       title,
+      displayMode,
       recommendMode,
       autoplay,
       arrowPosition,
       customPadding
     } = finalConfig
     let resolvedRecommendMode = recommendMode
+    let resolvedDisplayMode = displayMode
 
     async function fetchBrandConfigRecommendMode() {
       try {
@@ -106,28 +109,56 @@
         if (brandConfig && brandConfig.RecommendMode) {
           resolvedRecommendMode = brandConfig.RecommendMode
         }
+        if (brandConfig && brandConfig.DisplayMode) {
+          resolvedDisplayMode = brandConfig.DisplayMode
+        }
       } catch (error) {
         console.error('獲取品牌配置時發生錯誤:', error)
       }
     }
 
-    function getOrderedRecommendationItems(response) {
-      const modeList = resolvedRecommendMode
+    function getDisplayModeRecommendationItems(response) {
+      const sizeAiPtrValid = resolvedRecommendMode
         ? resolvedRecommendMode.split(',').map((item) => item.trim()).filter(Boolean)
         : ['bhv']
-
-      for (let i = 0; i < modeList.length; i++) {
-        const key = modeList[i]
-        if (Array.isArray(response[key]) && response[key].length > 0) {
-          return response[key].map((item) => {
-            const newItem = Object.assign({}, item)
-            newItem.event_recom = key
-            return newItem
-          })
+      const recommendationLimit = 12
+      const normalizedModes = sizeAiPtrValid.reduce((result, mode) => {
+        if (mode === 'sp_atc_sp_trans') {
+          result.push('sp_atc', 'sp_trans')
+          return result
         }
+        result.push(mode)
+        return result
+      }, [])
+
+      let modePriority = normalizedModes
+
+      if (resolvedDisplayMode === 'SaleRate') {
+        modePriority = ['bhv', 'corr', 'sp_atc', 'sp_trans'].filter((mode) =>
+          normalizedModes.includes(mode)
+        )
+      } else if (resolvedDisplayMode === 'SocialProofNum') {
+        modePriority = ['sp_atc', 'sp_trans'].filter((mode) => normalizedModes.includes(mode))
       }
 
-      return []
+      const sourceData = []
+      const seenIds = new Set()
+
+      modePriority.forEach((mode) => {
+        if (sourceData.length >= recommendationLimit) return
+        const sourceItems = Array.isArray(response[mode]) ? response[mode] : []
+        sourceItems.forEach((item) => {
+          if (sourceData.length >= recommendationLimit) return
+          const itemId = item.id || item.pid || item.productid || item.link
+          if (!itemId || seenIds.has(itemId)) return
+          seenIds.add(itemId)
+          const newItem = Object.assign({}, item)
+          newItem.event_recom = mode
+          sourceData.push(newItem)
+        })
+      })
+
+      return sourceData
     }
 
     function shouldUseShareUrlFormat() {
@@ -1220,7 +1251,7 @@
                 }
               }
 
-              const orderedRecommendationItems = getOrderedRecommendationItems(response)
+              const orderedRecommendationItems = getDisplayModeRecommendationItems(response)
               let jsonData =
                 customEdm && customEdm.length > 0
                   ? customEdm.map((item) => {
