@@ -272,8 +272,35 @@
 
       .tryon-qr__header {
         display: flex;
+        align-items: flex-start;
+        justify-content: space-between;
+        gap: 12px;
+      }
+
+      .tryon-qr__header-main {
+        display: flex;
         flex-direction: column;
         gap: 6px;
+      }
+
+      .tryon-qr__external-link {
+        width: 32px;
+        height: 32px;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        border-radius: 999px;
+        background: #fff;
+        color: #1e1e19;
+        text-decoration: none;
+        box-shadow: rgba(0, 0, 0, 0.08) 0px 0px 2px 0px;
+        flex-shrink: 0;
+      }
+
+      .tryon-qr__external-link:hover,
+      .tryon-qr__external-link:focus-visible {
+        background: #1e1e19;
+        color: #fff;
       }
 
       .tryon-qr__badge {
@@ -300,6 +327,22 @@
         align-items: center;
       }
 
+      .tryon-qr__image-link {
+        display: block;
+        width: 144px;
+        flex: 0 0 144px;
+        line-height: 0;
+        text-decoration: none;
+      }
+
+      .tryon-qr__image-link.tryon-qr__link--disabled,
+      .tryon-qr__name-link.tryon-qr__link--disabled,
+      .tryon-qr__external-link.tryon-qr__link--disabled {
+        pointer-events: none;
+        cursor: default;
+        opacity: 0.5;
+      }
+
       .tryon-qr__image {
         width: 144px;
         height: 144px;
@@ -322,6 +365,11 @@
         font-size: 18px;
         line-height: 24px;
         font-weight: 600;
+      }
+
+      .tryon-qr__name-link {
+        text-decoration: none;
+        color: inherit;
       }
 
       .tryon-qr__sku {
@@ -4354,20 +4402,51 @@
               <div class="tryon-showcase__side-panel">
                 <div class="tryon-qr" aria-live="polite">
                   <div class="tryon-qr__header">
-                    <span class="tryon-qr__badge" id="tryonProductBadge">專屬推薦
-                      </span>
-                    <p class="tryon-qr__hint" style="display: none;">立即掃碼結帳獲取更多優惠。</p>
+                    <div class="tryon-qr__header-main">
+                      <span class="tryon-qr__badge" id="tryonProductBadge">專屬推薦
+                        </span>
+                      <p class="tryon-qr__hint" style="display: none;">立即掃碼結帳獲取更多優惠。</p>
+                    </div>
+                    <a
+                      id="tryonProductExternalLink"
+                      class="tryon-qr__external-link tryon-qr__link--disabled"
+                      href="#"
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      aria-disabled="true"
+                    >
+                      <svg aria-hidden="true" class="svg-icon" viewBox="0 0 24 24" style="width: 20px; height: 20px; fill: currentColor;">
+                        <path d="M14 3h7v7h-2V6.41l-9.29 9.3-1.42-1.42 9.3-9.29H14V3z"></path>
+                        <path d="M5 5h6v2H7v10h10v-4h2v6H5V5z"></path>
+                      </svg>
+                    </a>
                   </div>
                   <div class="tryon-qr__body">
-                    <img
-                      id="tryonQrImage"
-                      class="tryon-qr__image"
-                      src=""
-                      alt="同步購物 QR code"
-                      loading="lazy"
-                    />
+                    <a
+                      id="tryonQrLink"
+                      class="tryon-qr__image-link tryon-qr__link--disabled"
+                      href="#"
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      aria-disabled="true"
+                    >
+                      <img
+                        id="tryonQrImage"
+                        class="tryon-qr__image"
+                        src=""
+                        alt="同步購物 QR code"
+                        loading="lazy"
+                      />
+                    </a>
                     <div class="tryon-qr__meta">
-                      <p class="tryon-qr__name" id="tryonProductName">載入專屬推薦中...</p>
+                      <a
+                        id="tryonProductName"
+                        class="tryon-qr__name tryon-qr__name-link tryon-qr__link--disabled"
+                        href="#"
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        aria-disabled="true"
+                      >載入專屬推薦中...</a>
                       <span class="tryon-qr__sku" id="tryonProductSku"></span>
                       <a
                         id="tryonProductLink"
@@ -4593,6 +4672,7 @@
           return
         }
         tryonCompanionAssetsLoading = true
+        resetTryonQrLoadingState()
         const loadingEl = document.getElementById('tryonCarouselLoading')
         if (loadingEl) {
           loadingEl.style.display = 'flex'
@@ -4652,17 +4732,35 @@
         }
 
         const linkEl = document.getElementById('tryonProductLink')
+        const qrLinkEl = document.getElementById('tryonQrLink')
+        const nameLinkEl = document.getElementById('tryonProductName')
+        const externalLinkEl = document.getElementById('tryonProductExternalLink')
+        const linkedElements = [linkEl, qrLinkEl, nameLinkEl, externalLinkEl].filter(Boolean)
+        linkedElements.forEach((element) => {
+          element.removeEventListener('click', handleDisabledTryonLink)
+        })
         if (linkEl) {
-          linkEl.removeEventListener('click', handleDisabledTryonLink)
-          if (productLink) {
-            linkEl.href = productLink
+          linkEl.style.display = productLink ? 'inline-flex' : 'none'
+        }
+        const resolvedProductHref = buildTryonProductHref(productLink)
+        if (productLink) {
+          linkedElements.forEach((element) => {
+            element.href = resolvedProductHref
+            element.setAttribute('aria-disabled', 'false')
+            element.classList.remove('tryon-qr__link--disabled')
+          })
+          if (linkEl) {
             linkEl.classList.remove('tryon-qr__cta--disabled')
-            linkEl.setAttribute('aria-disabled', 'false')
-          } else {
-            linkEl.href = '#'
+          }
+        } else {
+          linkedElements.forEach((element) => {
+            element.href = '#'
+            element.setAttribute('aria-disabled', 'true')
+            element.classList.add('tryon-qr__link--disabled')
+            element.addEventListener('click', handleDisabledTryonLink)
+          })
+          if (linkEl) {
             linkEl.classList.add('tryon-qr__cta--disabled')
-            linkEl.setAttribute('aria-disabled', 'true')
-            linkEl.addEventListener('click', handleDisabledTryonLink)
           }
         }
 
@@ -5072,6 +5170,7 @@
           ctaEls.forEach((ctaEl) => {
             ctaEl.disabled = true
             ctaEl.setAttribute('aria-disabled', 'true')
+            ctaEl.style.display = 'none'
           })
           toggleTryonScrollCtaPulse(false)
           return
@@ -5080,6 +5179,7 @@
         ctaEls.forEach((ctaEl) => {
           ctaEl.disabled = false
           ctaEl.setAttribute('aria-disabled', 'false')
+          ctaEl.style.display = 'inline-flex'
         })
         toggleTryonScrollCtaPulse(shouldPulse)
       }
@@ -5864,6 +5964,46 @@
           return true
         } catch (e) {
           return true
+        }
+      }
+
+      function buildTryonProductHref(productLink) {
+        if (!productLink) return '#'
+        if (!shouldUseShareUrlFormat()) return productLink
+        const shareUrl = new URL(window.location.href)
+        shareUrl.searchParams.set('link', productLink)
+        return shareUrl.toString()
+      }
+
+      function resetTryonQrLoadingState() {
+        const nameEl = document.getElementById('tryonProductName')
+        if (nameEl) {
+          nameEl.textContent = '載入專屬推薦中...'
+        }
+
+        const skuEl = document.getElementById('tryonProductSku')
+        if (skuEl) {
+          skuEl.textContent = ''
+          skuEl.style.display = 'none'
+        }
+
+        const linkEl = document.getElementById('tryonProductLink')
+        const qrLinkEl = document.getElementById('tryonQrLink')
+        const nameLinkEl = document.getElementById('tryonProductName')
+        const externalLinkEl = document.getElementById('tryonProductExternalLink')
+        const linkedElements = [linkEl, qrLinkEl, nameLinkEl, externalLinkEl].filter(Boolean)
+
+        linkedElements.forEach((element) => {
+          element.href = '#'
+          element.setAttribute('aria-disabled', 'true')
+          element.classList.add('tryon-qr__link--disabled')
+          element.removeEventListener('click', handleDisabledTryonLink)
+          element.addEventListener('click', handleDisabledTryonLink)
+        })
+
+        if (linkEl) {
+          linkEl.style.display = 'none'
+          linkEl.classList.add('tryon-qr__cta--disabled')
         }
       }
 
