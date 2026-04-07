@@ -2126,6 +2126,34 @@
         color: #fff;
       }
 
+      /**
+       * 依圖片長寬比撐開區塊高度，contain 時圖片可完整顯示且上下不留白（不裁左右）
+       * --cta-bg-w / --cta-bg-h 由 JS 或 URL 參數 ctaBgAspect 設定
+       */
+      .cta-section.cta-section--fit-bg {
+        box-sizing: content-box;
+        height: 0 !important;
+        min-height: 0 !important;
+        max-height: 500px;
+        padding: 0 !important;
+        padding-bottom: min(
+            calc(100% * var(--cta-bg-h, 600) / var(--cta-bg-w, 1440)),
+            500px
+          )
+          !important;
+        overflow: hidden;
+        background-repeat: no-repeat;
+        background-position: center;
+      }
+
+      .cta-section.cta-section--fit-bg.cta-section--fit-bg-overlay {
+        background-size: 100% 100%, 100% 100%, contain;
+      }
+
+      .cta-section.cta-section--fit-bg:not(.cta-section--fit-bg-overlay) {
+        background-size: contain;
+      }
+
       .cta-section .copy-alert {
         position: absolute;
         top: 28px;
@@ -2249,6 +2277,19 @@
             linear-gradient(90deg, rgba(0, 0, 0, 0.2) 0%, rgba(0, 0, 0, 0) 48%),
             linear-gradient(0deg, rgba(0, 0, 0, 0.24) 0%, rgba(0, 0, 0, 0.24) 100%),
             url('./img/personalized/coupon-bg-desktop.png') lightgray 50% / cover no-repeat; */
+        }
+
+        .cta-section.cta-section--fit-bg {
+          box-sizing: content-box;
+          height: 0 !important;
+          min-height: 0 !important;
+          max-height: 500px;
+          padding: 0 !important;
+          padding-bottom: min(
+              calc(100% * var(--cta-bg-h, 600) / var(--cta-bg-w, 1440)),
+              500px
+            )
+            !important;
         }
 
         .cta-section .copy-alert {
@@ -6649,13 +6690,17 @@
 
       /**
        * URL 控制 CTA 背景圖縮放與 letterbox 底色（預設與未帶參數時皆為 cover）
-       * - ctaBgSize：cover | contain（contain 時較不易裁到邊角 logo）
-       * - ctaBgColor：含 # 的色碼或 rgb()，例 ctaBgColor=%23f7f6f1
+       * - ctaBgSize：cover | contain | contain-height
+       *   - contain / contain-height：區塊高度依圖片長寬比自動計算，等比縮放、完整顯示圖片，上下不留白
+       *   - 可帶 ctaBgAspect=1440x600（或 1440/600、1440:600）指定比例；未帶則載入圖片讀取 naturalWidth/Height
+       * - ctaBgColor：letterbox 底色（僅在極少數比例極端時可見）
        */
       function resolveCtaBgUrlOptions() {
         const urlParams = new URLSearchParams(window.location.search)
         var size = (urlParams.get('ctaBgSize') || 'cover').trim().toLowerCase()
-        if (size !== 'contain' && size !== 'cover') {
+        if (size === 'contain-height' || size === 'height-fill') {
+          size = 'contain-height'
+        } else if (size !== 'contain' && size !== 'cover') {
           size = 'cover'
         }
         var colorRaw = urlParams.get('ctaBgColor')
@@ -6667,10 +6712,53 @@
             color = String(colorRaw).trim()
           }
         }
-        if (size === 'contain' && !color) {
+        if ((size === 'contain' || size === 'contain-height') && !color) {
           color = '#f7f6f1'
         }
         return { size: size, letterboxColor: color }
+      }
+
+      function parseCtaBgAspect(urlParams) {
+        const raw = urlParams.get('ctaBgAspect')
+        if (raw == null || String(raw).trim() === '') return null
+        var decoded = String(raw).trim()
+        try {
+          decoded = decodeURIComponent(decoded)
+        } catch (e) {}
+        const parts = decoded.split(/[x/:]/).map(function (p) {
+          return parseInt(p, 10)
+        })
+        const w = parts[0]
+        const h = parts[1]
+        if (w > 0 && h > 0) return { w: w, h: h }
+        return null
+      }
+
+      function clearCtaFitBgStyles(el) {
+        el.classList.remove('cta-section--fit-bg', 'cta-section--fit-bg-overlay')
+        el.style.removeProperty('--cta-bg-w')
+        el.style.removeProperty('--cta-bg-h')
+      }
+
+      function applyCtaFitBgStyles(el, bgImage, aspectW, aspectH, letterboxColor, shouldShowOverlay) {
+        el.classList.add('cta-section--fit-bg')
+        el.classList.toggle('cta-section--fit-bg-overlay', Boolean(shouldShowOverlay))
+        el.style.setProperty('--cta-bg-w', String(aspectW))
+        el.style.setProperty('--cta-bg-h', String(aspectH))
+        const safeUrl = bgImage.replace(/'/g, "\\'")
+        const url = "url('" + safeUrl + "')"
+        if (letterboxColor) {
+          el.style.backgroundColor = letterboxColor
+        } else {
+          el.style.backgroundColor = ''
+        }
+        if (shouldShowOverlay) {
+          el.style.backgroundImage =
+            'linear-gradient(90deg, rgba(0, 0, 0, 0.2) 0%, rgba(0, 0, 0, 0) 48%), linear-gradient(0deg, rgba(0, 0, 0, 0.24) 0%, rgba(0, 0, 0, 0.24) 100%), ' +
+            url
+        } else {
+          el.style.backgroundImage = url
+        }
       }
 
       function updateCouponBackground() {
@@ -6681,8 +6769,60 @@
         const bgImage = isMobile ? fakeData.coupon.img_mobile : fakeData.coupon.img_desktop
 
         const bgUrlOpts = resolveCtaBgUrlOptions()
-        const bgBaseColor =
-          bgUrlOpts.size === 'contain' && bgUrlOpts.letterboxColor ? bgUrlOpts.letterboxColor : 'lightgray'
+        const urlParams = new URLSearchParams(window.location.search)
+        const showCtaOverlayParam = urlParams.get('showCtaOverlay')
+        const shouldShowOverlay = showCtaOverlayParam !== 'false' && showCtaOverlayParam !== '0'
+
+        const useFitBg = bgUrlOpts.size === 'contain' || bgUrlOpts.size === 'contain-height'
+
+        if (useFitBg) {
+          clearCtaFitBgStyles(couponContainerElement)
+          const parsedAspect = parseCtaBgAspect(urlParams)
+          if (parsedAspect) {
+            applyCtaFitBgStyles(
+              couponContainerElement,
+              bgImage,
+              parsedAspect.w,
+              parsedAspect.h,
+              bgUrlOpts.letterboxColor,
+              shouldShowOverlay
+            )
+            return
+          }
+          const img = new Image()
+          img.onload = function () {
+            var nw = img.naturalWidth
+            var nh = img.naturalHeight
+            if (!nw || !nh) {
+              nw = 1440
+              nh = 600
+            }
+            applyCtaFitBgStyles(
+              couponContainerElement,
+              bgImage,
+              nw,
+              nh,
+              bgUrlOpts.letterboxColor,
+              shouldShowOverlay
+            )
+          }
+          img.onerror = function () {
+            applyCtaFitBgStyles(
+              couponContainerElement,
+              bgImage,
+              1440,
+              600,
+              bgUrlOpts.letterboxColor,
+              shouldShowOverlay
+            )
+          }
+          img.src = bgImage
+          return
+        }
+
+        clearCtaFitBgStyles(couponContainerElement)
+
+        const bgBaseColor = 'lightgray'
         var imageLayer =
           "url('" +
           bgImage +
@@ -6692,18 +6832,8 @@
           bgUrlOpts.size +
           ' no-repeat'
 
-        if (bgUrlOpts.size === 'contain' && bgUrlOpts.letterboxColor) {
-          couponContainerElement.style.backgroundColor = bgUrlOpts.letterboxColor
-        } else {
-          couponContainerElement.style.backgroundColor = ''
-        }
+        couponContainerElement.style.backgroundColor = ''
 
-        // 檢查 URL 參數是否要顯示遮罩（預設為 true，即顯示遮罩）
-        const urlParams = new URLSearchParams(window.location.search)
-        const showCtaOverlayParam = urlParams.get('showCtaOverlay')
-        const shouldShowOverlay = showCtaOverlayParam !== 'false' && showCtaOverlayParam !== '0'
-
-        // 根據參數決定是否添加漸變遮罩
         if (shouldShowOverlay) {
           couponContainerElement.style.background = `
     linear-gradient(90deg, rgba(0, 0, 0, 0.2) 0%, rgba(0, 0, 0, 0) 48%),
