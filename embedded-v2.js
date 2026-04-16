@@ -134,7 +134,14 @@
       var skuContent = shopline_sku() //plain_me_sku()
       var show_up_position_before = '#' + containerId
       var test = 'A'
-      var GA4Key = ''
+      var GA4Key = (function () {
+        if (finalConfig.GA4Key) return finalConfig.GA4Key
+        try {
+          return new URLSearchParams(window.location.search).get('ga4key') || ''
+        } catch (e) {
+          return ''
+        }
+      })()
   
       // 移除全局模块注册代码
   
