@@ -18,6 +18,31 @@
     />
     <!-- LIFF SDK -->
     <script charset="utf-8" src="https://static.line-scdn.net/liff/edge/2/sdk.js"></script>
+    <script>
+      ;(function () {
+        try {
+          var params = new URLSearchParams(window.location.search)
+          var ga4key = (params.get('ga4key') || '').trim()
+          if (!ga4key) return
+
+          window.dataLayer = window.dataLayer || []
+          window.gtag =
+            window.gtag ||
+            function () {
+              window.dataLayer.push(arguments)
+            }
+
+          window.gtag('js', new Date())
+          window.gtag('config', ga4key)
+
+          var script = document.createElement('script')
+          script.async = true
+          script.src = 'https://www.googletagmanager.com/gtag/js?id=' + encodeURIComponent(ga4key)
+          var firstScript = document.getElementsByTagName('script')[0]
+          firstScript.parentNode.insertBefore(script, firstScript)
+        } catch (e) {}
+      })()
+    </script>
     <style>
       * {
         font-family: 'Noto Sans TC', 'sans-serif';
