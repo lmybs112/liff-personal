@@ -225,9 +225,23 @@
 
     function fetchPidFromModelAPI() {
       const dataUrl = 'https://api.inffits.com/httpgpi/model'
+      function resolveModelUrlParam() {
+        try {
+          const params = new URLSearchParams(window.location.search)
+          const raw = params.get('link') || params.get('Link') || params.get('url') || params.get('URL') || ''
+          if (!raw) return ''
+          try {
+            return decodeURIComponent(raw)
+          } catch (e) {
+            return raw
+          }
+        } catch (e) {
+          return ''
+        }
+      }
       const requestData = {
         Brand: Brand,
-        url: document.location.href.split('?')[0],
+        url: resolveModelUrlParam() || document.location.href.split('?')[0],
         CONFIG: 'on',
         '91APP': 'on'
       }
