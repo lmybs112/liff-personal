@@ -166,12 +166,12 @@
       }
       function member_id_Shopline() {
         //Fake data
-        let member_id = ''
-        // let chklog1 = '"currentUser\\"';
-        // let chklog2 = ':null';
-        // if (!document.documentElement.innerHTML.includes(chklog1 + chklog2)) {
-        //     member_id = document.documentElement.innerHTML.split('href="/users/')[1].split('",')[0].split('/edit"')[0];
-        // }
+        // let member_id = ''
+        let chklog1 = '"currentUser\\"';
+        let chklog2 = ':null';
+        if (!document.documentElement.innerHTML.includes(chklog1 + chklog2)) {
+            member_id = document.documentElement.innerHTML.split('href="/users/')[1].split('",')[0].split('/edit"')[0];
+        }
         return member_id
       }
       function member_id_plain_me() {
@@ -211,10 +211,10 @@
         return skuContent
       }
       function shopline_sku() {
-        //var data = document.documentElement.innerHTML
-        //var skuContent = data.split('"sku":"')[1].split('"')[0].split(':')[0]
+        var data = document.documentElement.innerHTML
+        var skuContent = data.split('"sku":"')[1].split('"')[0].split(':')[0]
         //Fake data
-        skuContent = '627b5ab044a027000fde0add'
+        // skuContent = '627b5ab044a027000fde0add'
         return skuContent
       }
   

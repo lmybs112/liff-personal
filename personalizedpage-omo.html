@@ -6418,12 +6418,17 @@
           }
           return result
         }
+      function shopline_sku() {
+        var data = document.documentElement.innerHTML
+        var skuContent = data.split('"sku":"')[1].split('"')[0].split(':')[0]
+        return skuContent
+      }
       function ids_init() {
 
 
         let member_id = ''
         let lgiven_id = ''
-        let skuContent = '627b5ab044a027000fde0add'
+        var skuContent = shopline_sku()
 
         let lgvid_exist = false
         try {
