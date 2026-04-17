@@ -7070,9 +7070,18 @@
           return result
         }
       function shopline_sku() {
-        var data = document.documentElement.innerHTML
-        var skuContent = data.split('"sku":"')[1].split('"')[0].split(':')[0]
-        return skuContent
+        try {
+          var data = document.documentElement.innerHTML
+          if (!data || data.indexOf('"sku":"') === -1) return '627b5ab044a027000fde0add'
+          var parts = data.split('"sku":"')
+          if (!parts[1]) return '627b5ab044a027000fde0add'
+          var raw = parts[1].split('"')[0]
+          if (!raw) return '627b5ab044a027000fde0add'
+          var skuContent = raw.split(':')[0]
+          return skuContent || '627b5ab044a027000fde0add'
+        } catch (e) {
+          return '627b5ab044a027000fde0add'
+        }
       }
       function ids_init() {
 
