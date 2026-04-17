@@ -4168,6 +4168,14 @@
       return
     }
     Gender_ClothID = Results["Gender_ClothID"];
+    try {
+      const pidParts = String(Gender_ClothID).split('&')
+      const pidBrandPart = pidParts && pidParts[1] ? pidParts[1] : ''
+      const pid = pidBrandPart && pidBrandPart.indexOf('_') > -1 ? pidBrandPart.split('_')[1] : ''
+      if (pid) {
+        window.__INFFITS_PID = pid
+      }
+    } catch (e) {}
     const ctryonWindow = document.getElementById('inffits_ctryon_window');
     
     // 定義用於 iframe 錯誤處理的變量
@@ -6423,12 +6431,7 @@
 
         let member_id = ''
         let lgiven_id = ''
-        var skuContent = ''
-        try {
-          skuContent = (typeof shopline_sku === 'function' ? shopline_sku() : '') || ''
-        } catch (e) {
-          skuContent = ''
-        }
+        let skuContent = '627b5ab044a027000fde0add'
 
         let lgvid_exist = false
         try {
