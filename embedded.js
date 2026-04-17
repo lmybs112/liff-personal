@@ -263,11 +263,14 @@
       return skuContent
     }
     function shopline_sku() {
-      var data = document.documentElement.innerHTML
-      var skuContent = data.split('"sku":"')[1].split('"')[0].split(':')[0]
-      //Fake data
-      // skuContent = '627b5ab044a027000fde0add'
-      return skuContent
+      try {
+        var data = document.documentElement.innerHTML || ''
+        var match = data.match(/"sku":"([^"]+)"/)
+        if (!match || !match[1]) return ''
+        return String(match[1]).split(':')[0]
+      } catch (e) {
+        return ''
+      }
     }
 
     ////Main////
