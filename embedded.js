@@ -183,7 +183,7 @@
     ////Global////
     var Brand = brand
     // var link_included = ['inffits', 'localhost', 'personalizedpage', 'product']
-    var skuContent = '' // 由 httpgpi/model 回傳的 Gender_ClothID 解析取得
+    var skuContent = shopline_sku() //plain_me_sku()
     var show_up_position_before = '#' + containerId
     var test = 'A'
     var GA4Key = (function () {
@@ -265,46 +265,36 @@
     function shopline_sku() {
       //var data = document.documentElement.innerHTML
       //var skuContent = data.split('"sku":"')[1].split('"')[0].split(':')[0]
-      //Fake data
-      skuContent = '627b5ab044a027000fde0add'
-      return skuContent
+      return ''
     }
 
-    function parsePidFromGenderClothID(Gender_ClothID) {
-      try {
-        if (!Gender_ClothID) return ''
-        var parts = String(Gender_ClothID).split('&')
-        if (parts.length >= 2 && parts[1]) {
-          var idx = parts[1].indexOf('_')
-          if (idx >= 0) return parts[1].slice(idx + 1)
-        }
-        var fallback = String(Gender_ClothID).split('_')[1] || ''
-        return fallback.split('&')[0] || ''
-      } catch (e) {
-        return ''
+    function parsePidFromGenderClothID(genderClothID) {
+      if (!genderClothID || typeof genderClothID !== 'string') return ''
+      const afterUnderscore = genderClothID.split('_')[1] || ''
+      if (!afterUnderscore) return ''
+      return afterUnderscore.split('&')[0] || ''
+    }
+
+    function fetchPidFromModelAPI() {
+      const dataUrl = 'https://api.inffits.com/httpgpi/model'
+      const requestData = {
+        Brand: Brand,
+        url: document.location.href.split('?')[0],
+        CONFIG: 'on',
+        '91APP': 'on'
       }
-    }
-
-    async function fetchPidFromModelApi(Brand) {
-      try {
-        var dataUrl = 'https://api.inffits.com/httpgpi/model'
-        var payload = {
-          Brand: Brand,
-          url: document.location.href.split('?')[0],
-          CONFIG: 'on',
-          '91APP': 'on'
-        }
-        var res = await fetch(dataUrl, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify(payload)
+      const options = {
+        method: 'POST',
+        headers: { accept: 'application/json', 'content-type': 'application/json' },
+        body: JSON.stringify(requestData)
+      }
+      return fetch(dataUrl, options)
+        .then((res) => res.json())
+        .then((data) => {
+          if (!data || !data.Gender_ClothID) return ''
+          return parsePidFromGenderClothID(data.Gender_ClothID)
         })
-        var json = await res.json()
-        var pid = parsePidFromGenderClothID(json && json.Gender_ClothID)
-        return pid || ''
-      } catch (e) {
-        return ''
-      }
+        .catch(() => '')
     }
 
     ////Main////
@@ -885,8 +875,8 @@
                         `
         document.head.appendChild(customCSS)
 
-        $(async function () {
-          let ids = await ids_init()
+        $(function () {
+          let idsPromise = ids_init()
 
           // console.log("DOM is ready");
           $(show_up_position_before).append(
@@ -1036,7 +1026,9 @@
           //     document.getElementById('embedded-ad-bootstrap-scoped').textContent = scopedCSS
           //   })
 
-          getEmbeddedAds(ids)
+          idsPromise.then(function (ids) {
+            getEmbeddedAds(ids)
+          })
           // getEmbeddedAds_corr(ids);
         })
 
@@ -1145,7 +1137,7 @@
           })
         })
 
-        async function ids_init() {
+        function ids_init() {
           var makeid = function (length) {
             var result = ''
             var characters = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789'
@@ -1179,14 +1171,13 @@
             lgiven_id = makeid(20)
             localStorage.setItem('LGVID', lgiven_id)
           }
-          if (!skuContent) {
-            skuContent = (await fetchPidFromModelApi(Brand)) || plain_me_sku() || app91_sku() || shopline_sku()
-          }
-          return {
-            member_id: member_id,
-            lgiven_id: lgiven_id,
-            skuContent: skuContent
-          }
+          return fetchPidFromModelAPI().then(function (pid) {
+            return {
+              member_id: member_id,
+              lgiven_id: lgiven_id,
+              skuContent: pid || skuContent
+            }
+          })
         }
         function getEmbeddedAds(ids) {
           const requestData =  brand.toLocaleUpperCase() === 'DABE' ? {

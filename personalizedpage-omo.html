@@ -4168,14 +4168,6 @@
       return
     }
     Gender_ClothID = Results["Gender_ClothID"];
-    try {
-      const pidParts = String(Gender_ClothID).split('&')
-      const pidBrandPart = pidParts && pidParts[1] ? pidParts[1] : ''
-      const pid = pidBrandPart && pidBrandPart.indexOf('_') > -1 ? pidBrandPart.split('_')[1] : ''
-      if (pid) {
-        window.__INFFITS_PID = pid
-      }
-    } catch (e) {}
     const ctryonWindow = document.getElementById('inffits_ctryon_window');
     
     // 定義用於 iframe 錯誤處理的變量
@@ -6431,7 +6423,18 @@
 
         let member_id = ''
         let lgiven_id = ''
-        let skuContent = '627b5ab044a027000fde0add'
+        let skuContent = ''
+
+        function parsePidFromGenderClothID(genderClothID) {
+          if (!genderClothID || typeof genderClothID !== 'string') return ''
+          const afterUnderscore = genderClothID.split('_')[1] || ''
+          if (!afterUnderscore) return ''
+          return afterUnderscore.split('&')[0] || ''
+        }
+
+        if (typeof Gender_ClothID !== 'undefined') {
+          skuContent = parsePidFromGenderClothID(Gender_ClothID) || ''
+        }
 
         let lgvid_exist = false
         try {
