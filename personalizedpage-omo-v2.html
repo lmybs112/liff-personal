@@ -271,6 +271,15 @@
         flex-direction: column;
         gap: 32px;
         padding: 0 24px;
+        position: relative;
+      }
+
+      .tryon-qr {
+        position: relative;
+      }
+
+      .tryon-side-panel-dock {
+        position: relative;
       }
 
       .tryon-showcase__body {
@@ -278,6 +287,14 @@
         flex-direction: column;
         gap: 32px;
         width: 100%;
+        position: relative;
+      }
+
+      .tryon-showcase__body .tryon-collapse-toggle {
+        top: -22px;
+        right: 0px;
+        transform: translate(50%, -50%);
+        z-index: 20;
       }
 
       .tryon-showcase__iframe {
@@ -288,11 +305,15 @@
       }
 
       .tryon-collapse-toggle {
-        width: 100%;
+        position: absolute;
+        top: 16px;
+        right: 0;
+        width: auto;
         display: none;
-        justify-content: center;
-        padding: 0 24px;
+        justify-content: flex-end;
+        padding: 0;
         box-sizing: border-box;
+        z-index: 5;
       }
 
       .tryon-collapse-toggle--visible {
@@ -320,6 +341,37 @@
         transform: translateY(-1px);
         box-shadow: 0 14px 34px rgba(0, 0, 0, 0.12);
         background: #fdfcf7;
+      }
+
+      .tryon-collapse-toggle__icon-btn {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        width: 36px;
+        height: 36px;
+        border-radius: 999px;
+        border: 1px solid rgba(0, 0, 0, 0.1);
+        background: rgba(255, 255, 255, 0.94);
+        backdrop-filter: blur(12px);
+        -webkit-backdrop-filter: blur(12px);
+        color: #1e1e19;
+        cursor: pointer;
+        transition: transform 0.35s cubic-bezier(0.22, 1, 0.36, 1), box-shadow 0.35s ease, background 0.35s ease;
+        box-shadow: 0 10px 26px rgba(0, 0, 0, 0.08);
+      }
+
+      .tryon-collapse-toggle__icon-btn:hover,
+      .tryon-collapse-toggle__icon-btn:focus-visible {
+        transform: translateY(-1px);
+        box-shadow: 0 14px 34px rgba(0, 0, 0, 0.12);
+        background: rgba(253, 252, 247, 0.98);
+      }
+
+      @media screen and (min-width: 1280px) {
+        .tryon-collapse-toggle {
+          top: 16px;
+          right: 0;
+        }
       }
 
       /* 專屬推薦區（QR + 輪播）外層：滾至 #jump-recom 時可收合為底欄橫幅 */
@@ -5570,9 +5622,16 @@
             toggleWrap.id = 'tryonCollapseToggle'
             toggleWrap.className = 'tryon-collapse-toggle'
             toggleWrap.innerHTML = `
-              <button type="button" class="tryon-collapse-toggle__btn" id="tryonCollapseToggleBtn">收合智慧試衣間</button>
+              <button type="button" class="tryon-collapse-toggle__icon-btn" id="tryonCollapseToggleBtn" aria-label="收合智慧試衣間" title="收合智慧試衣間">
+                <svg width="20" height="20" viewBox="0 0 24 24" aria-hidden="true" focusable="false">
+                  <path d="M18 6L6 18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" />
+                  <path d="M6 6L18 18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" />
+                </svg>
+              </button>
             `
-            tryOnSection.appendChild(toggleWrap)
+            const tryonShowcaseBodyEl = tryOnSection.querySelector('.tryon-showcase__body')
+            const tryonShowcaseEl = tryOnSection.querySelector('.tryon-showcase')
+            ;(tryonShowcaseBodyEl || tryonShowcaseEl || tryOnSection).appendChild(toggleWrap)
           }
           personalizedHeroSection.style.display = 'none'
           tryOnSection.style.display = 'flex'
@@ -5648,7 +5707,8 @@
             tryOnSectionEl.classList.add('tryon_section--companion-banner-dock')
           }
           if (toggleBtnEl) {
-            toggleBtnEl.textContent = '收合智慧試衣間'
+            toggleBtnEl.setAttribute('aria-label', '收合智慧試衣間')
+            toggleBtnEl.setAttribute('title', '收合智慧試衣間')
           }
           if (toggleWrapEl) {
             toggleWrapEl.classList.remove('tryon-collapse-toggle--visible')
@@ -5664,7 +5724,8 @@
             tryOnSectionEl.classList.remove('tryon_section--companion-banner-dock')
           }
           if (toggleBtnEl) {
-            toggleBtnEl.textContent = '收合智慧試衣間'
+            toggleBtnEl.setAttribute('aria-label', '收合智慧試衣間')
+            toggleBtnEl.setAttribute('title', '收合智慧試衣間')
           }
           if (toggleWrapEl) {
             toggleWrapEl.classList.toggle('tryon-collapse-toggle--visible', Boolean(shouldShowToggle))
