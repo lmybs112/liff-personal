@@ -4406,6 +4406,10 @@
       return
     }
     Gender_ClothID = Results["Gender_ClothID"];
+    const ClothID = Results["ClothID"] || '';
+    const ItemName = Results["ItemName"] || '';
+    const SizeStringList = Array.isArray(Results["SizeStringList"]) ? Results["SizeStringList"].join(',') : '';
+    const Imgsrc = Results["Imgsrc"] || '';
     const ctryonWindow = document.getElementById('inffits_ctryon_window');
     
     // 定義用於 iframe 錯誤處理的變量
@@ -4563,8 +4567,8 @@
     
     // 設置 iframe src，但保持完全隱藏，只有收到成功消息後才顯示
     if (ctryonWindow) {
-      const iframeUrl = 'https://inffits.com/webDesign/HTML/js/iframe/indexwebiframe_CAX_tw_' +
-        Brand.toLowerCase() + '.html?' + Gender_ClothID;
+      let iframeUrl;
+      const brandUpper = (Brand || '').toUpperCase();
       
       // 完全隱藏 iframe 容器（使用 display: none 確保完全不顯示，包括 404）
       const iframeContainer = document.getElementById('inffits_cblock');
@@ -4582,10 +4586,34 @@
         }
       }
       
-      // 直接設置 iframe src（在隱藏狀態下載入）
-      // 只有收到 IDRxReady 消息後才會顯示，如果 3 秒內沒收到消息則觸發 fallback
-      ctryonWindow.setAttribute('src', iframeUrl);
-      setupIframeErrorHandling(ctryonWindow);
+      if (brandUpper === 'ANNS' || brandUpper === 'CLARKS') {
+        const shoesBase = 'https://inffits.com/webDesign/HTML/infFITS_shoes_AI/iframe_container_shoes_' + Brand.toLowerCase() + '.html';
+        const cid = ClothID || '';
+        const sizes = SizeStringList || '';
+        const nameForIframe = ItemName || '';
+        const imageForIframe = Imgsrc || '';
+
+        const shoesQ = new URLSearchParams();
+        // 鞋款 iframe 端會直接對參數做 split；此處固定帶 key（即使值為空字串）避免 undefined
+        shoesQ.set('cid', cid);
+        shoesQ.set('sizes', sizes);
+        shoesQ.set('name', nameForIframe);
+        shoesQ.set('image', imageForIframe);
+        iframeUrl = shoesBase + (shoesQ.toString() ? '?' + shoesQ.toString() : '');
+
+        // 直接設置 iframe src（在隱藏狀態下載入）
+        // 只有收到 IDRxReady 消息後才會顯示，如果 3 秒內沒收到消息則觸發 fallback
+        ctryonWindow.setAttribute('src', iframeUrl);
+        setupIframeErrorHandling(ctryonWindow);
+      } else {
+        iframeUrl = 'https://inffits.com/webDesign/HTML/js/iframe/indexwebiframe_CAX_tw_' +
+          Brand.toLowerCase() + '.html?' + Gender_ClothID;
+
+        // 直接設置 iframe src（在隱藏狀態下載入）
+        // 只有收到 IDRxReady 消息後才會顯示，如果 3 秒內沒收到消息則觸發 fallback
+        ctryonWindow.setAttribute('src', iframeUrl);
+        setupIframeErrorHandling(ctryonWindow);
+      }
     }
   })
   .catch(error => {
@@ -4639,11 +4667,17 @@
       function updateTryOnView() {
         const tryOnSection = document.querySelector('.tryon_section')
         const personalizedHeroSection = document.querySelector('.personalized_hero_section')
+        const brandUpper = (Brand || '').toUpperCase()
+        const isShoesBrand = brandUpper === 'CLARKS' || brandUpper === 'ANNS'
+        const tryonTitleText = isShoesBrand ? '您的專屬試穿間' : '您的專屬試衣間'
+        const tryonDescText = isShoesBrand
+          ? '根據你的腳形資訊，精選推薦好物，讓每次穿搭更自在自信。'
+          : '根據你的身形資訊，精選舒適好物，讓每次穿搭更自在自信。'
         if (tryOnSection && tryOn === 'true') {
           tryOnSection.innerHTML = `
           <div class="text-section">
-            <h2 id="tryon_section_title">您的專屬試衣間</h2>
-            <p id="tryon_section_desc">根據你的身形資訊，精選舒適好物，讓每次穿搭更自在自信。</p>
+            <h2 id="tryon_section_title">${tryonTitleText}</h2>
+            <p id="tryon_section_desc">${tryonDescText}</p>
           </div>
           <div class="tryon-showcase">
             <div class="tryon-showcase__body">
@@ -4652,7 +4686,7 @@
                   <!-- Loading 指示器 -->
                   <div id="tryonIframeLoading" class="tryon-iframe-loading" style="display: none;">
                     <div class="tryon-iframe-loading__spinner"></div>
-                    <p class="tryon-iframe-loading__text">載入試衣間中...</p>
+                    <p class="tryon-iframe-loading__text">載入試穿間中...</p>
                   </div>
                   <div
                     id="ctryon"
@@ -4663,6 +4697,7 @@
                       visibility: visible;
                       outline: none;
                       border: solid 1px rgb(245, 245, 245);
+                      position: relative;
                     "
                   >
                     <iframe
