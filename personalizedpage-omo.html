@@ -285,6 +285,165 @@
         margin: 0 auto;
       }
 
+      /* 專屬推薦區（QR + 輪播）外層：滾至 #jump-recom 時可收合為底欄橫幅 */
+      .tryon-side-panel-dock {
+        display: flex;
+        flex-direction: column;
+        gap: 16px;
+        width: 100%;
+      }
+
+      /* 收合橫幅留在版面原位（非 fixed），點擊可還原（由 JS 切 class）；視覺為「展開區塊」而非外開分頁 */
+      .tryon-side-panel-dock__expand-affordance {
+        display: none;
+      }
+
+      .tryon-side-panel-dock.tryon-side-panel-dock--banner {
+        flex-direction: row;
+        align-items: center;
+        gap: 12px;
+        width: 100%;
+        max-width: min(520px, 100%);
+        margin: 0 auto;
+        padding: 10px 14px;
+        box-sizing: border-box;
+        background: rgba(255, 255, 255, 0.94);
+        backdrop-filter: blur(12px);
+        -webkit-backdrop-filter: blur(12px);
+        border-radius: 20px;
+        border: 1px dashed rgba(74, 52, 31, 0.28);
+        box-shadow: 0 4px 20px rgba(74, 52, 31, 0.06);
+        cursor: pointer;
+        transition:
+          transform 0.3s cubic-bezier(0.33, 1, 0.68, 1),
+          opacity 0.3s ease;
+      }
+
+      .tryon-side-panel-dock--banner .tryon-side-panel-dock__expand-affordance {
+        display: inline-flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        gap: 2px;
+        flex: 0 0 auto;
+        order: 1;
+        min-width: 52px;
+        padding: 4px 2px;
+        color: #4a341f;
+        pointer-events: none;
+      }
+
+      .tryon-side-panel-dock__expand-icon {
+        display: block;
+        flex-shrink: 0;
+      }
+
+      .tryon-side-panel-dock__expand-label {
+        font-size: 11px;
+        font-weight: 600;
+        letter-spacing: 0.06em;
+        line-height: 1.2;
+        color: #6b5c48;
+        white-space: nowrap;
+      }
+
+      /* 底欄收合時一併隱藏左欄（試衣 iframe 與穿搭靈感區）；不對 side-panel 用 display:none 以免固定式 modal 失效 */
+      .tryon-showcase__body.tryon-showcase__body--companion-banner-dock {
+        gap: 16px;
+      }
+
+      .tryon-showcase__body.tryon-showcase__body--companion-banner-dock .tryon-showcase__iframe {
+        display: none;
+      }
+
+      .tryon-showcase__body.tryon-showcase__body--companion-banner-dock .tryon-showcase__side-panel {
+        width: 100%;
+        max-width: min(520px, 100%);
+        margin-left: auto;
+        margin-right: auto;
+      }
+
+      .tryon-side-panel-dock--banner .tryon-carousel {
+        flex: 0 0 56px;
+        width: 56px;
+        border-radius: 12px;
+        overflow: hidden;
+        align-self: center;
+        order: -1;
+      }
+
+      .tryon-side-panel-dock--banner .tryon-carousel__viewport {
+        padding-top: 0;
+        width: 56px;
+        height: 56px;
+      }
+
+      .tryon-side-panel-dock--banner .tryon-qr {
+        flex: 1 1 auto;
+        min-width: 0;
+        padding: 8px 10px;
+        gap: 6px;
+        border: none;
+        background: transparent;
+        border-radius: 0;
+      }
+
+      .tryon-side-panel-dock--banner .tryon-qr__header {
+        align-items: center;
+      }
+
+      .tryon-side-panel-dock--banner .tryon-qr__external-link {
+        display: none;
+      }
+
+      .tryon-side-panel-dock--banner .tryon-qr__badge {
+        padding: 3px 10px;
+        font-size: 11px;
+      }
+
+      .tryon-side-panel-dock--banner .tryon-qr__body {
+        gap: 0;
+      }
+
+      .tryon-side-panel-dock--banner .tryon-qr__image-link {
+        display: none;
+      }
+
+      .tryon-side-panel-dock--banner .tryon-qr__sku {
+        display: none;
+      }
+
+      .tryon-side-panel-dock--banner .tryon-qr__meta {
+        min-width: 0;
+      }
+
+      .tryon-side-panel-dock--banner .tryon-qr__name {
+        font-size: 13px;
+        line-height: 18px;
+        font-weight: 600;
+        display: -webkit-box;
+        -webkit-box-orient: vertical;
+        -webkit-line-clamp: 2;
+        line-clamp: 2;
+        overflow: hidden;
+      }
+
+      .tryon-side-panel-dock--banner .tryon-qr__name-link {
+        text-decoration: none;
+        color: #1e1e19;
+        cursor: pointer;
+      }
+
+      .tryon-side-panel-dock--banner .tryon-scroll-gallery__cta {
+        display: none;
+      }
+
+      @media (prefers-reduced-motion: reduce) {
+        .tryon-side-panel-dock.tryon-side-panel-dock--banner {
+          transition: none;
+        }
+      }
+
       .tryon-qr {
         border-radius: 28px;
         border: 1px solid #efefef;
@@ -1281,6 +1440,12 @@
           width: 438px;
           max-width: 438px;
           margin: 0 auto;
+        }
+
+        .tryon-showcase__body.tryon-showcase__body--companion-banner-dock {
+          flex-direction: column;
+          align-items: center;
+          max-width: 100%;
         }
         .tryon-scroll-gallery {
           padding: 28px;
@@ -3622,6 +3787,8 @@
       let customEdm = []
       let tryonCompanionAssetsLoading = false
       let tryonCompanionAssetsLoaded = false
+      /** @type {null | (() => void)} */
+      let tryonSidePanelDockScrollCleanup = null
       const defaultEdmItems = [
         {
           image_link:
@@ -4455,6 +4622,7 @@
                 </div>
               </div>
               <div class="tryon-showcase__side-panel">
+                <div class="tryon-side-panel-dock" id="tryonSidePanelDock">
                 <div class="tryon-qr" aria-live="polite">
                   <div class="tryon-qr__header">
                     <div class="tryon-qr__header-main">
@@ -4551,6 +4719,27 @@
                       →
                     </button>
                   </div>
+                </div>
+                <span class="tryon-side-panel-dock__expand-affordance" aria-hidden="true">
+                  <svg
+                    class="tryon-side-panel-dock__expand-icon"
+                    xmlns="http://www.w3.org/2000/svg"
+                    width="22"
+                    height="22"
+                    viewBox="0 0 24 24"
+                    fill="none"
+                    aria-hidden="true"
+                  >
+                    <path
+                      d="M6 15l6-6 6 6M6 20l6-6 6 6"
+                      stroke="currentColor"
+                      stroke-width="2"
+                      stroke-linecap="round"
+                      stroke-linejoin="round"
+                    />
+                  </svg>
+                  <span class="tryon-side-panel-dock__expand-label">開啟試衣間</span>
+                </span>
                 </div>
                 <div class="tryon-scroll-gallery" aria-live="polite" style="display: none;">
                   <button type="button" class="tryon-scroll-gallery__cta" id="tryonScrollViewAll" disabled>
@@ -4695,12 +4884,109 @@
           }
           requestAnimationFrame(() => {
             initTryonCompanion()
+            initTryonSidePanelDockScroll()
           })
         } else {
+          teardownTryonSidePanelDockScroll()
           tryOnSection.innerHTML = ''
           personalizedHeroSection.style.display = 'flex'
           tryOnSection.style.display = 'none'
           resetTryonCompanion()
+        }
+      }
+
+      /**
+       * 移除捲動監聽並還原底欄狀態（離開試衣模式時呼叫）
+       */
+      function teardownTryonSidePanelDockScroll() {
+        if (typeof tryonSidePanelDockScrollCleanup === 'function') {
+          tryonSidePanelDockScrollCleanup()
+          tryonSidePanelDockScrollCleanup = null
+        }
+        document.body.classList.remove('tryon-side-panel-dock-banner-active')
+        document.querySelectorAll('.tryon-showcase__body--companion-banner-dock').forEach((el) => {
+          el.classList.remove('tryon-showcase__body--companion-banner-dock')
+        })
+      }
+
+      /**
+       * 依 #jump-recom 與視窗相對位置，將左欄（iframe／穿搭靈感）隱藏並將 QR+輪播收合為橫幅（留在原本欄位流程內，非 fixed）。
+       * 點擊橫幅任意處一律還原折疊前版面（不先開商品連結）；已還原時須先將 #jump-recom 捲回視窗下方一段距離後，才會再次自動收合。
+       */
+      function initTryonSidePanelDockScroll() {
+        teardownTryonSidePanelDockScroll()
+        const jumpEl = document.getElementById('jump-recom')
+        const dockEl = document.getElementById('tryonSidePanelDock')
+        const showcaseBodyEl = dockEl ? dockEl.closest('.tryon-showcase__body') : null
+        if (!jumpEl || !dockEl || tryOn !== 'true') return
+
+        let docked = false
+        let manualExpand = false
+        let ticking = false
+        const scrollListenerOpts = { passive: true }
+
+        function detachListeners() {
+          window.removeEventListener('scroll', onScrollOrResize, scrollListenerOpts)
+          window.removeEventListener('resize', onScrollOrResize)
+          dockEl.removeEventListener('click', onDockClick, true)
+        }
+
+        function applyCollapsedUi() {
+          dockEl.classList.add('tryon-side-panel-dock--banner')
+          if (showcaseBodyEl) {
+            showcaseBodyEl.classList.add('tryon-showcase__body--companion-banner-dock')
+          }
+        }
+
+        function applyExpandedUi() {
+          dockEl.classList.remove('tryon-side-panel-dock--banner')
+          if (showcaseBodyEl) {
+            showcaseBodyEl.classList.remove('tryon-showcase__body--companion-banner-dock')
+          }
+        }
+
+        function expandDock() {
+          if (!docked) return
+          docked = false
+          manualExpand = true
+          applyExpandedUi()
+        }
+
+        function onDockClick(e) {
+          if (!dockEl.classList.contains('tryon-side-panel-dock--banner')) return
+          // 橫幅狀態一律先還原折疊前版面（含 QR 大圖、輪播、左欄 iframe）；攔截子元素連結避免先跳走
+          e.preventDefault()
+          e.stopPropagation()
+          expandDock()
+        }
+
+        function onScrollOrResize() {
+          if (ticking) return
+          ticking = true
+          requestAnimationFrame(() => {
+            ticking = false
+            const top = jumpEl.getBoundingClientRect().top
+            const ih = window.innerHeight
+            if (manualExpand && top > ih + 40) {
+              manualExpand = false
+            }
+            if (!docked && !manualExpand && top < ih - 56) {
+              docked = true
+              applyCollapsedUi()
+            }
+          })
+        }
+
+        window.addEventListener('scroll', onScrollOrResize, scrollListenerOpts)
+        window.addEventListener('resize', onScrollOrResize)
+        dockEl.addEventListener('click', onDockClick, true)
+        onScrollOrResize()
+
+        tryonSidePanelDockScrollCleanup = () => {
+          detachListeners()
+          docked = false
+          manualExpand = false
+          applyExpandedUi()
         }
       }
 
@@ -5185,6 +5471,7 @@
        * 重置輪播狀態
        */
       function resetTryonCompanion() {
+        teardownTryonSidePanelDockScroll()
         pauseTryonCarouselAutoplay()
         tryonCarouselState.images = []
         tryonCarouselState.currentIndex = 0
