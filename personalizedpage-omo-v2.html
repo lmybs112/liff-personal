@@ -174,6 +174,25 @@
         align-items: center;
         width: 100%;
       }
+
+      /* 收合狀態：縮小上下留白與區塊間距 */
+      .tryon_section.tryon_section--companion-banner-dock {
+        padding: 24px 0px;
+        gap: 24px;
+      }
+
+      .tryon_section.tryon_section--companion-banner-dock .tryon-showcase {
+        gap: 16px;
+      }
+
+      .tryon_section.tryon_section--companion-banner-dock .tryon-showcase__body {
+        gap: 16px;
+      }
+
+      .tryon_section.tryon_section--companion-banner-dock .text-section h2,
+      .tryon_section.tryon_section--companion-banner-dock .text-section p {
+        margin: 0;
+      }
       .tryon_section .text-section {
         display: flex;
         flex-direction: column;
@@ -214,6 +233,23 @@
           padding: 100px 80px;
           gap: 64px;
         }
+
+        .tryon_section.tryon_section--companion-banner-dock {
+          padding: 56px 80px;
+          gap: 32px;
+        }
+
+        .tryon_section.tryon_section--companion-banner-dock .text-section {
+          gap: 14px;
+        }
+
+        .tryon_section.tryon_section--companion-banner-dock .tryon-showcase {
+          gap: 16px;
+        }
+
+        .tryon_section.tryon_section--companion-banner-dock .tryon-showcase__body {
+          gap: 16px;
+        }
         .tryon_section .text-section {
           gap: 24px;
         }
@@ -249,6 +285,200 @@
         display: flex;
         justify-content: center;
         position: relative;
+      }
+
+      .tryon-collapse-toggle {
+        width: 100%;
+        display: none;
+        justify-content: center;
+        padding: 0 24px;
+        box-sizing: border-box;
+      }
+
+      .tryon-collapse-toggle--visible {
+        display: flex;
+      }
+
+      .tryon-collapse-toggle__btn {
+        width: 100%;
+        max-width: 520px;
+        border-radius: 999px;
+        border: 1px solid rgba(0, 0, 0, 0.1);
+        background: #fff;
+        color: #1e1e19;
+        font-size: 14px;
+        font-weight: 700;
+        letter-spacing: 0.02em;
+        padding: 12px 18px;
+        cursor: pointer;
+        transition: transform 0.35s cubic-bezier(0.22, 1, 0.36, 1), box-shadow 0.35s ease, background 0.35s ease;
+        box-shadow: 0 10px 26px rgba(0, 0, 0, 0.08);
+      }
+
+      .tryon-collapse-toggle__btn:hover,
+      .tryon-collapse-toggle__btn:focus-visible {
+        transform: translateY(-1px);
+        box-shadow: 0 14px 34px rgba(0, 0, 0, 0.12);
+        background: #fdfcf7;
+      }
+
+      /* 專屬推薦區（QR + 輪播）外層：滾至 #jump-recom 時可收合為底欄橫幅 */
+      .tryon-side-panel-dock {
+        display: flex;
+        flex-direction: column;
+        gap: 16px;
+        width: 100%;
+      }
+
+      /* 收合橫幅留在版面原位（非 fixed），點擊可還原（由 JS 切 class）；視覺為「展開區塊」而非外開分頁 */
+      .tryon-side-panel-dock__expand-affordance {
+        display: none;
+      }
+
+      .tryon-side-panel-dock.tryon-side-panel-dock--banner {
+        flex-direction: row;
+        align-items: center;
+        gap: 12px;
+        width: 100%;
+        max-width: min(520px, 100%);
+        margin: 0 auto;
+        padding: 10px 14px;
+        box-sizing: border-box;
+        background: rgba(255, 255, 255, 0.94);
+        backdrop-filter: blur(12px);
+        -webkit-backdrop-filter: blur(12px);
+        border-radius: 20px;
+        border: 1px dashed rgba(74, 52, 31, 0.28);
+        box-shadow: 0 4px 20px rgba(74, 52, 31, 0.06);
+        cursor: pointer;
+        transition:
+          transform 0.3s cubic-bezier(0.33, 1, 0.68, 1),
+          opacity 0.3s ease;
+      }
+
+      .tryon-side-panel-dock--banner .tryon-side-panel-dock__expand-affordance {
+        display: inline-flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        gap: 2px;
+        flex: 0 0 auto;
+        order: 1;
+        min-width: 52px;
+        padding: 4px 2px;
+        color: #4a341f;
+        pointer-events: none;
+      }
+
+      .tryon-side-panel-dock__expand-icon {
+        display: block;
+        flex-shrink: 0;
+      }
+
+      .tryon-side-panel-dock__expand-label {
+        font-size: 11px;
+        font-weight: 600;
+        letter-spacing: 0.06em;
+        line-height: 1.2;
+        color: #6b5c48;
+        white-space: nowrap;
+      }
+
+      /* 底欄收合時一併隱藏左欄（試衣 iframe 與穿搭靈感區）；不對 side-panel 用 display:none 以免固定式 modal 失效 */
+      .tryon-showcase__body.tryon-showcase__body--companion-banner-dock {
+        gap: 16px;
+      }
+
+      .tryon-showcase__body.tryon-showcase__body--companion-banner-dock .tryon-showcase__iframe {
+        display: none;
+      }
+
+      .tryon-showcase__body.tryon-showcase__body--companion-banner-dock .tryon-showcase__side-panel {
+        width: 100%;
+        max-width: min(520px, 100%);
+        margin-left: auto;
+        margin-right: auto;
+      }
+
+      .tryon-side-panel-dock--banner .tryon-carousel {
+        flex: 0 0 56px;
+        width: 56px;
+        border-radius: 12px;
+        overflow: hidden;
+        align-self: center;
+        order: -1;
+      }
+
+      .tryon-side-panel-dock--banner .tryon-carousel__viewport {
+        padding-top: 0;
+        width: 56px;
+        height: 56px;
+      }
+
+      .tryon-side-panel-dock--banner .tryon-qr {
+        flex: 1 1 auto;
+        min-width: 0;
+        padding: 8px 10px;
+        gap: 6px;
+        border: none;
+        background: transparent;
+        border-radius: 0;
+      }
+
+      .tryon-side-panel-dock--banner .tryon-qr__header {
+        align-items: center;
+      }
+
+      .tryon-side-panel-dock--banner .tryon-qr__external-link {
+        display: none;
+      }
+
+      .tryon-side-panel-dock--banner .tryon-qr__badge {
+        padding: 3px 10px;
+        font-size: 11px;
+      }
+
+      .tryon-side-panel-dock--banner .tryon-qr__body {
+        gap: 0;
+      }
+
+      .tryon-side-panel-dock--banner .tryon-qr__image-link {
+        display: none;
+      }
+
+      .tryon-side-panel-dock--banner .tryon-qr__sku {
+        display: none;
+      }
+
+      .tryon-side-panel-dock--banner .tryon-qr__meta {
+        min-width: 0;
+      }
+
+      .tryon-side-panel-dock--banner .tryon-qr__name {
+        font-size: 13px;
+        line-height: 18px;
+        font-weight: 600;
+        display: -webkit-box;
+        -webkit-box-orient: vertical;
+        -webkit-line-clamp: 2;
+        line-clamp: 2;
+        overflow: hidden;
+      }
+
+      .tryon-side-panel-dock--banner .tryon-qr__name-link {
+        text-decoration: none;
+        color: #1e1e19;
+        cursor: pointer;
+      }
+
+      .tryon-side-panel-dock--banner .tryon-scroll-gallery__cta {
+        display: none;
+      }
+
+      @media (prefers-reduced-motion: reduce) {
+        .tryon-side-panel-dock.tryon-side-panel-dock--banner {
+          transition: none;
+        }
       }
 
       /* Loading 指示器樣式 */
@@ -4171,6 +4401,8 @@
       let customEdm = []
       let tryonCompanionAssetsLoading = false
       let tryonCompanionAssetsLoaded = false
+      /** @type {null | (() => void)} */
+      let tryonSidePanelDockScrollCleanup = null
       const defaultEdmItems = [
         {
           image_link:
@@ -5079,6 +5311,7 @@
                 </div>
               </div>
               <div class="tryon-showcase__side-panel">
+                <div class="tryon-side-panel-dock" id="tryonSidePanelDock">
                 <div class="tryon-qr" aria-live="polite">
                   <div class="tryon-qr__header">
                     <div class="tryon-qr__header-main">
@@ -5175,6 +5408,27 @@
                       →
                     </button>
                   </div>
+                </div>
+                <span class="tryon-side-panel-dock__expand-affordance" aria-hidden="true">
+                  <svg
+                    class="tryon-side-panel-dock__expand-icon"
+                    xmlns="http://www.w3.org/2000/svg"
+                    width="22"
+                    height="22"
+                    viewBox="0 0 24 24"
+                    fill="none"
+                    aria-hidden="true"
+                  >
+                    <path
+                      d="M6 15l6-6 6 6M6 20l6-6 6 6"
+                      stroke="currentColor"
+                      stroke-width="2"
+                      stroke-linecap="round"
+                      stroke-linejoin="round"
+                    />
+                  </svg>
+                  <span class="tryon-side-panel-dock__expand-label">開啟試衣間</span>
+                </span>
                 </div>
                 <div class="tryon-scroll-gallery" aria-live="polite" style="display: none;">
                   <button type="button" class="tryon-scroll-gallery__cta" id="tryonScrollViewAll" disabled>
@@ -5310,6 +5564,16 @@
           </style>
           <div id="inffits_cblock_tail"></div>
           `
+          const collapseToggle = document.getElementById('tryonCollapseToggle')
+          if (!collapseToggle) {
+            const toggleWrap = document.createElement('div')
+            toggleWrap.id = 'tryonCollapseToggle'
+            toggleWrap.className = 'tryon-collapse-toggle'
+            toggleWrap.innerHTML = `
+              <button type="button" class="tryon-collapse-toggle__btn" id="tryonCollapseToggleBtn">收合智慧試衣間</button>
+            `
+            tryOnSection.appendChild(toggleWrap)
+          }
           personalizedHeroSection.style.display = 'none'
           tryOnSection.style.display = 'flex'
           // 確保 tryon-scroll-gallery 始終隱藏（不應該顯示中間的垂直粉色橢圓形區塊）
@@ -5319,12 +5583,130 @@
           }
           requestAnimationFrame(() => {
             initTryonCompanion()
+            initTryonSidePanelDockManualToggle()
           })
         } else {
+          teardownTryonSidePanelDockScroll()
           tryOnSection.innerHTML = ''
           personalizedHeroSection.style.display = 'flex'
           tryOnSection.style.display = 'none'
           resetTryonCompanion()
+        }
+      }
+
+      function teardownTryonSidePanelDockScroll() {
+        if (typeof tryonSidePanelDockScrollCleanup === 'function') {
+          tryonSidePanelDockScrollCleanup()
+          tryonSidePanelDockScrollCleanup = null
+        }
+        document.body.classList.remove('tryon-side-panel-dock-banner-active')
+        document.querySelectorAll('.tryon-showcase__body--companion-banner-dock').forEach((el) => {
+          el.classList.remove('tryon-showcase__body--companion-banner-dock')
+        })
+        document.querySelectorAll('.tryon_section--companion-banner-dock').forEach((el) => {
+          el.classList.remove('tryon_section--companion-banner-dock')
+        })
+        const collapseToggleEl = document.getElementById('tryonCollapseToggle')
+        if (collapseToggleEl) {
+          collapseToggleEl.classList.remove('tryon-collapse-toggle--visible')
+        }
+      }
+
+      /**
+       * 手動收合/展開：由下方按鈕決定是否收合；點橫幅任意處還原。
+       * URL 參數控制按鈕是否顯示：showCollapseToggle=1/true/yes/on
+       */
+      function initTryonSidePanelDockManualToggle() {
+        teardownTryonSidePanelDockScroll()
+        const dockEl = document.getElementById('tryonSidePanelDock')
+        const showcaseBodyEl = dockEl ? dockEl.closest('.tryon-showcase__body') : null
+        const tryOnSectionEl = dockEl ? dockEl.closest('.tryon_section') : null
+        const toggleWrapEl = document.getElementById('tryonCollapseToggle')
+        const toggleBtnEl = document.getElementById('tryonCollapseToggleBtn')
+        if (!dockEl || tryOn !== 'true') return
+
+        let docked = false
+        const params = new URLSearchParams(window.location.search || '')
+        const isToggleEnabledRaw = params.get('showCollapseToggle')
+        const isToggleEnabled = String(isToggleEnabledRaw || '').toLowerCase()
+        const shouldShowToggle =
+          isToggleEnabled === '1' || isToggleEnabled === 'true' || isToggleEnabled === 'yes' || isToggleEnabled === 'on'
+
+        function detachListeners() {
+          dockEl.removeEventListener('click', onDockClick, true)
+          if (toggleBtnEl) {
+            toggleBtnEl.removeEventListener('click', onToggleBtnClick)
+          }
+        }
+
+        function applyCollapsedUi() {
+          dockEl.classList.add('tryon-side-panel-dock--banner')
+          if (showcaseBodyEl) {
+            showcaseBodyEl.classList.add('tryon-showcase__body--companion-banner-dock')
+          }
+          if (tryOnSectionEl) {
+            tryOnSectionEl.classList.add('tryon_section--companion-banner-dock')
+          }
+          if (toggleBtnEl) {
+            toggleBtnEl.textContent = '收合智慧試衣間'
+          }
+          if (toggleWrapEl) {
+            toggleWrapEl.classList.remove('tryon-collapse-toggle--visible')
+          }
+        }
+
+        function applyExpandedUi() {
+          dockEl.classList.remove('tryon-side-panel-dock--banner')
+          if (showcaseBodyEl) {
+            showcaseBodyEl.classList.remove('tryon-showcase__body--companion-banner-dock')
+          }
+          if (tryOnSectionEl) {
+            tryOnSectionEl.classList.remove('tryon_section--companion-banner-dock')
+          }
+          if (toggleBtnEl) {
+            toggleBtnEl.textContent = '收合智慧試衣間'
+          }
+          if (toggleWrapEl) {
+            toggleWrapEl.classList.toggle('tryon-collapse-toggle--visible', Boolean(shouldShowToggle))
+          }
+        }
+
+        function expandDock() {
+          if (!docked) return
+          docked = false
+          applyExpandedUi()
+        }
+
+        function collapseDock() {
+          if (docked) return
+          docked = true
+          applyCollapsedUi()
+        }
+
+        function onDockClick(e) {
+          if (!dockEl.classList.contains('tryon-side-panel-dock--banner')) return
+          e.preventDefault()
+          e.stopPropagation()
+          expandDock()
+        }
+
+        function onToggleBtnClick(e) {
+          e.preventDefault()
+          collapseDock()
+        }
+
+        dockEl.addEventListener('click', onDockClick, true)
+        if (toggleWrapEl) {
+          toggleWrapEl.classList.toggle('tryon-collapse-toggle--visible', Boolean(shouldShowToggle))
+        }
+        if (toggleBtnEl && shouldShowToggle) {
+          toggleBtnEl.addEventListener('click', onToggleBtnClick)
+        }
+
+        tryonSidePanelDockScrollCleanup = () => {
+          detachListeners()
+          docked = false
+          applyExpandedUi()
         }
       }
 
@@ -5419,7 +5801,7 @@
           element.removeEventListener('click', handleDisabledTryonLink)
         })
         if (linkEl) {
-          linkEl.style.display = productLink ? 'inline-flex' : 'none'
+          linkEl.style.display = 'none'
         }
         const resolvedProductHref = buildTryonProductHref(productLink)
         if (productLink) {
@@ -5836,6 +6218,7 @@
        * 重置輪播狀態
        */
       function resetTryonCompanion() {
+        teardownTryonSidePanelDockScroll()
         pauseTryonCarouselAutoplay()
         tryonCarouselState.images = []
         tryonCarouselState.currentIndex = 0

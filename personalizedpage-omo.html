@@ -174,6 +174,60 @@
         align-items: center;
         width: 100%;
       }
+
+      /* 收合狀態：縮小上下留白與區塊間距 */
+      .tryon_section.tryon_section--companion-banner-dock {
+        padding: 24px 0px;
+        gap: 24px;
+      }
+
+      .tryon_section.tryon_section--companion-banner-dock .tryon-showcase {
+        gap: 16px;
+      }
+
+      .tryon_section.tryon_section--companion-banner-dock .tryon-showcase__body {
+        gap: 16px;
+      }
+
+      .tryon_section.tryon_section--companion-banner-dock .text-section h2,
+      .tryon_section.tryon_section--companion-banner-dock .text-section p {
+        margin: 0;
+      }
+
+      .tryon-collapse-toggle {
+        width: 100%;
+        display: none;
+        justify-content: center;
+        padding: 0 24px;
+        box-sizing: border-box;
+      }
+
+      .tryon-collapse-toggle--visible {
+        display: flex;
+      }
+
+      .tryon-collapse-toggle__btn {
+        width: 100%;
+        max-width: 520px;
+        border-radius: 999px;
+        border: 1px solid rgba(0, 0, 0, 0.1);
+        background: #fff;
+        color: #1e1e19;
+        font-size: 14px;
+        font-weight: 700;
+        letter-spacing: 0.02em;
+        padding: 12px 18px;
+        cursor: pointer;
+        transition: transform 0.35s cubic-bezier(0.22, 1, 0.36, 1), box-shadow 0.35s ease, background 0.35s ease;
+        box-shadow: 0 10px 26px rgba(0, 0, 0, 0.08);
+      }
+
+      .tryon-collapse-toggle__btn:hover,
+      .tryon-collapse-toggle__btn:focus-visible {
+        transform: translateY(-1px);
+        box-shadow: 0 14px 34px rgba(0, 0, 0, 0.12);
+        background: #fdfcf7;
+      }
       .tryon_section .text-section {
         display: none;
       }
@@ -181,6 +235,23 @@
         .tryon_section {
           padding: 100px 80px;
           gap: 64px;
+        }
+
+        .tryon_section.tryon_section--companion-banner-dock {
+          padding: 56px 80px;
+          gap: 32px;
+        }
+
+        .tryon_section.tryon_section--companion-banner-dock .text-section {
+          gap: 14px;
+        }
+
+        .tryon_section.tryon_section--companion-banner-dock .tryon-showcase {
+          gap: 16px;
+        }
+
+        .tryon_section.tryon_section--companion-banner-dock .tryon-showcase__body {
+          gap: 16px;
         }
         .tryon_section .text-section {
           display: flex;
@@ -4870,6 +4941,16 @@
           </style>
           <div id="inffits_cblock_tail"></div>
           `
+          const collapseToggle = document.getElementById('tryonCollapseToggle')
+          if (!collapseToggle) {
+            const toggleWrap = document.createElement('div')
+            toggleWrap.id = 'tryonCollapseToggle'
+            toggleWrap.className = 'tryon-collapse-toggle'
+            toggleWrap.innerHTML = `
+              <button type="button" class="tryon-collapse-toggle__btn" id="tryonCollapseToggleBtn">收合智慧試衣間</button>
+            `
+            tryOnSection.appendChild(toggleWrap)
+          }
           personalizedHeroSection.style.display = 'none'
           tryOnSection.style.display = 'flex'
           // 確保 tryon-scroll-gallery 始終隱藏（不應該顯示中間的垂直粉色橢圓形區塊）
@@ -4879,7 +4960,7 @@
           }
           requestAnimationFrame(() => {
             initTryonCompanion()
-            initTryonSidePanelDockScroll()
+            initTryonSidePanelDockManualToggle()
           })
         } else {
           teardownTryonSidePanelDockScroll()
@@ -4902,34 +4983,55 @@
         document.querySelectorAll('.tryon-showcase__body--companion-banner-dock').forEach((el) => {
           el.classList.remove('tryon-showcase__body--companion-banner-dock')
         })
+        document.querySelectorAll('.tryon_section--companion-banner-dock').forEach((el) => {
+          el.classList.remove('tryon_section--companion-banner-dock')
+        })
+        const collapseToggle = document.getElementById('tryonCollapseToggle')
+        if (collapseToggle) {
+          collapseToggle.classList.remove('tryon-collapse-toggle--visible')
+        }
       }
 
       /**
-       * 依 #jump-recom 與視窗相對位置，將左欄（iframe／穿搭靈感）隱藏並將 QR+輪播收合為橫幅（留在原本欄位流程內，非 fixed）。
-       * 點擊橫幅任意處一律還原折疊前版面（不先開商品連結）；已還原時須先將 #jump-recom 捲回視窗下方一段距離後，才會再次自動收合。
+       * 手動收合/展開（移除自動滾動收合）：由下方按鈕決定是否收合；點橫幅任意處還原。
+       * URL 參數控制按鈕是否顯示：showCollapseToggle=1/true/yes/on
        */
-      function initTryonSidePanelDockScroll() {
+      function initTryonSidePanelDockManualToggle() {
         teardownTryonSidePanelDockScroll()
-        const jumpEl = document.getElementById('jump-recom')
         const dockEl = document.getElementById('tryonSidePanelDock')
         const showcaseBodyEl = dockEl ? dockEl.closest('.tryon-showcase__body') : null
-        if (!jumpEl || !dockEl || tryOn !== 'true') return
+        const tryOnSectionEl = dockEl ? dockEl.closest('.tryon_section') : null
+        const toggleWrapEl = document.getElementById('tryonCollapseToggle')
+        const toggleBtnEl = document.getElementById('tryonCollapseToggleBtn')
+        if (!dockEl || tryOn !== 'true') return
 
         let docked = false
-        let manualExpand = false
-        let ticking = false
-        const scrollListenerOpts = { passive: true }
+        const params = new URLSearchParams(window.location.search || '')
+        const isToggleEnabledRaw = params.get('showCollapseToggle')
+        const isToggleEnabled = String(isToggleEnabledRaw || '').toLowerCase()
+        const shouldShowToggle =
+          isToggleEnabled === '1' || isToggleEnabled === 'true' || isToggleEnabled === 'yes' || isToggleEnabled === 'on'
 
         function detachListeners() {
-          window.removeEventListener('scroll', onScrollOrResize, scrollListenerOpts)
-          window.removeEventListener('resize', onScrollOrResize)
           dockEl.removeEventListener('click', onDockClick, true)
+          if (toggleBtnEl) {
+            toggleBtnEl.removeEventListener('click', onToggleBtnClick)
+          }
         }
 
         function applyCollapsedUi() {
           dockEl.classList.add('tryon-side-panel-dock--banner')
           if (showcaseBodyEl) {
             showcaseBodyEl.classList.add('tryon-showcase__body--companion-banner-dock')
+          }
+          if (tryOnSectionEl) {
+            tryOnSectionEl.classList.add('tryon_section--companion-banner-dock')
+          }
+          if (toggleBtnEl) {
+            toggleBtnEl.textContent = '收合智慧試衣間'
+          }
+          if (toggleWrapEl) {
+            toggleWrapEl.classList.remove('tryon-collapse-toggle--visible')
           }
         }
 
@@ -4938,49 +5040,52 @@
           if (showcaseBodyEl) {
             showcaseBodyEl.classList.remove('tryon-showcase__body--companion-banner-dock')
           }
+          if (tryOnSectionEl) {
+            tryOnSectionEl.classList.remove('tryon_section--companion-banner-dock')
+          }
+          if (toggleBtnEl) {
+            toggleBtnEl.textContent = '收合智慧試衣間'
+          }
+          if (toggleWrapEl) {
+            toggleWrapEl.classList.toggle('tryon-collapse-toggle--visible', Boolean(shouldShowToggle))
+          }
         }
 
         function expandDock() {
           if (!docked) return
           docked = false
-          manualExpand = true
           applyExpandedUi()
+        }
+
+        function collapseDock() {
+          if (docked) return
+          docked = true
+          applyCollapsedUi()
         }
 
         function onDockClick(e) {
           if (!dockEl.classList.contains('tryon-side-panel-dock--banner')) return
-          // 橫幅狀態一律先還原折疊前版面（含 QR 大圖、輪播、左欄 iframe）；攔截子元素連結避免先跳走
           e.preventDefault()
           e.stopPropagation()
           expandDock()
         }
 
-        function onScrollOrResize() {
-          if (ticking) return
-          ticking = true
-          requestAnimationFrame(() => {
-            ticking = false
-            const top = jumpEl.getBoundingClientRect().top
-            const ih = window.innerHeight
-            if (manualExpand && top > ih + 40) {
-              manualExpand = false
-            }
-            if (!docked && !manualExpand && top < ih - 56) {
-              docked = true
-              applyCollapsedUi()
-            }
-          })
+        function onToggleBtnClick(e) {
+          e.preventDefault()
+          collapseDock()
         }
 
-        window.addEventListener('scroll', onScrollOrResize, scrollListenerOpts)
-        window.addEventListener('resize', onScrollOrResize)
         dockEl.addEventListener('click', onDockClick, true)
-        onScrollOrResize()
+        if (toggleWrapEl) {
+          toggleWrapEl.classList.toggle('tryon-collapse-toggle--visible', Boolean(shouldShowToggle))
+        }
+        if (toggleBtnEl && shouldShowToggle) {
+          toggleBtnEl.addEventListener('click', onToggleBtnClick)
+        }
 
         tryonSidePanelDockScrollCleanup = () => {
           detachListeners()
           docked = false
-          manualExpand = false
           applyExpandedUi()
         }
       }
