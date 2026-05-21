@@ -299,3 +299,16 @@ Content-Type: application/json
   "Brand": "MDMR",
   "Link": "https://brashop.modemarie.com.tw/SalePage/Index/11612163"
 }
+
+
+###
+POST https://api.inffits.com/httpgpi/model
+Content-Type: application/json
+
+
+{
+    "Brand": "MDMR",
+    "url":"https://brashop.modemarie.com.tw/SalePage/Index/11612163",
+    "CONFIG": "on",
+    "91APP": "on"
+}
