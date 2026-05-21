@@ -3871,13 +3871,73 @@
         }
       })();
 
+      // 全域 Copilot 狀態快取機制，避免多個元件重複呼叫 API
+      window.inffitsFetchCopilotStatus = window.inffitsFetchCopilotStatus || function(brand, linkVal) {
+        const cacheKey = `${(brand || '').toUpperCase()}_${linkVal || ''}`;
+        window._copilotStatusPromises = window._copilotStatusPromises || {};
+        if (!window._copilotStatusPromises[cacheKey]) {
+          window._copilotStatusPromises[cacheKey] = fetch('https://api.inffits.com/pid_get_copilot_status/model', {
+            method: 'POST',
+            headers: {
+              'accept': 'application/json',
+              'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({
+              Brand: (brand || '').toUpperCase(),
+              Link: linkVal || '',
+              TID: '1',
+              subctype: 'bra',
+              num: 10
+            })
+          })
+          .then(res => {
+            if (!res.ok) throw new Error('API 回應異常');
+            return res.json();
+          })
+          .catch(err => {
+            delete window._copilotStatusPromises[cacheKey]; // 失敗時清除快取，以利重試
+            throw err;
+          });
+        }
+        return window._copilotStatusPromises[cacheKey];
+      };
+
+      // 全域 httpgpi/model 快取機制，避免多個元件重複呼叫 API
+      window.inffitsFetchModelData = window.inffitsFetchModelData || function(brand, urlVal) {
+        const cacheKey = `${(brand || '').toUpperCase()}_${urlVal || ''}`;
+        window._modelDataPromises = window._modelDataPromises || {};
+        if (!window._modelDataPromises[cacheKey]) {
+          window._modelDataPromises[cacheKey] = fetch('https://api.inffits.com/httpgpi/model', {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({
+              Brand: brand,
+              url: urlVal,
+              CONFIG: "on",
+              "91APP": "on"
+            })
+          })
+          .then(res => {
+            if (!res.ok) throw new Error('API 回應異常');
+            return res.json();
+          })
+          .catch(err => {
+            delete window._modelDataPromises[cacheKey]; // 失敗時清除快取，以利重試
+            throw err;
+          });
+        }
+        return window._modelDataPromises[cacheKey];
+      };
+
       const params = new URLSearchParams(window.location.search)
       let Brand = params.get('brand') || ''
       const randomGen = !!Brand ? 'false' : 'true'
       if (randomGen ==='true') {
         Brand = 'JERSCY'
       }
-      const link = params.get('link') || params.get('Link') || ''
+      const link = params.get('link') || params.get('Link') || params.get('url') || params.get('URL') || ''
       const tryOn = params.get('tryon') || 'false'
       const type = params.get('type') || 'pd'
       const TRYON_COPILOT_ENDPOINT = 'https://api.inffits.com/pid_get_copilot_status/model'
@@ -4445,25 +4505,9 @@
 
   if (!urlVal) {
     try {
-      const copilotRes = await fetch('https://api.inffits.com/pid_get_copilot_status/model', {
-        method: 'POST',
-        headers: {
-          'accept': 'application/json',
-          'Content-Type': 'application/json'
-        },
-        body: JSON.stringify({
-          Brand: Brand.toUpperCase(),
-          Link: '',
-          TID: '1',
-          subctype: 'bra',
-          num: 10
-        })
-      });
-      if (copilotRes.ok) {
-        const copilotData = await copilotRes.json();
-        if (copilotData && copilotData.data && copilotData.data[0] && copilotData.data[0].Link) {
-          urlVal = copilotData.data[0].Link;
-        }
+      const copilotData = await window.inffitsFetchCopilotStatus(Brand, '');
+      if (copilotData && copilotData.data && copilotData.data[0] && copilotData.data[0].Link) {
+        urlVal = copilotData.data[0].Link;
       }
     } catch (e) {
       console.error('抓取 copilot status 失敗：', e);
@@ -4483,14 +4527,17 @@
     // hostname: document.location.hostname
   };
 
-  await fetch(dataUrl, {
-    method: "POST",
-    headers: {
-      'Content-Type': 'application/json'
-    },
-    body: JSON.stringify(Payload)
-  })
-  .then(response => response.json())
+  const fetchPromise = (typeof window.inffitsFetchModelData === 'function')
+    ? window.inffitsFetchModelData(Brand, urlVal)
+    : fetch(dataUrl, {
+        method: "POST",
+        headers: {
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify(Payload)
+      }).then(response => response.json());
+
+  await fetchPromise
   .then(res => {
     let Results = res;
     if (!Results || !Results["Gender_ClothID"]) {
@@ -5275,18 +5322,26 @@
             TRYON_COMPANION_SOURCE.subctype,
             TRYON_COMPANION_SOURCE.num
           )
-          const response = await fetch(TRYON_COPILOT_ENDPOINT, {
-            method: 'POST',
-            headers: {
-              accept: 'application/json',
-              'Content-Type': 'application/json'
-            },
-            body: JSON.stringify(payload)
-          })
-          if (!response.ok) {
-            throw new Error(`Copilot API 回應異常：${response.status}`)
+          let result;
+          if (typeof window.inffitsFetchCopilotStatus === 'function') {
+            result = await window.inffitsFetchCopilotStatus(
+              TRYON_COMPANION_SOURCE.brand,
+              TRYON_COMPANION_SOURCE.Link
+            );
+          } else {
+            const response = await fetch(TRYON_COPILOT_ENDPOINT, {
+              method: 'POST',
+              headers: {
+                accept: 'application/json',
+                'Content-Type': 'application/json'
+              },
+              body: JSON.stringify(payload)
+            })
+            if (!response.ok) {
+              throw new Error(`Copilot API 回應異常：${response.status}`)
+            }
+            result = await response.json()
           }
-          const result = await response.json()
           const normalized = TryonCarouselUtils.transformCopilotPayload(result)
           renderTryonCompanion(normalized)
           tryonCompanionAssetsLoaded = true

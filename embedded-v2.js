@@ -241,19 +241,21 @@
       }
 
       function callModelAPI(urlVal) {
-        const requestData = {
-          Brand: Brand,
-          url: urlVal,
-          CONFIG: 'on',
-          '91APP': 'on'
-        }
-        const options = {
-          method: 'POST',
-          headers: { accept: 'application/json', 'content-type': 'application/json' },
-          body: JSON.stringify(requestData)
-        }
-        return fetch(dataUrl, options)
-          .then((res) => res.json())
+        const fetchPromise =
+          typeof window.inffitsFetchModelData === 'function'
+            ? window.inffitsFetchModelData(Brand, urlVal)
+            : fetch(dataUrl, {
+                method: 'POST',
+                headers: { accept: 'application/json', 'content-type': 'application/json' },
+                body: JSON.stringify({
+                  Brand: Brand,
+                  url: urlVal,
+                  CONFIG: 'on',
+                  '91APP': 'on'
+                })
+              }).then((res) => res.json())
+
+        return fetchPromise
           .then((data) => {
             if (!data || !data.Gender_ClothID) return ''
             return parsePidFromGenderClothID(data.Gender_ClothID)
@@ -263,27 +265,31 @@
 
       const modelUrl = resolveModelUrlParam()
       if (!modelUrl) {
-        // 當 resolveModelUrlParam() 抓不到時，改抓 pid_get_copilot_status/model 回傳的 data[0].Link
-        return fetch('https://api.inffits.com/pid_get_copilot_status/model', {
-          method: 'POST',
-          headers: { accept: 'application/json', 'content-type': 'application/json' },
-          body: JSON.stringify({
-            Brand: Brand.toUpperCase(),
-            Link: '',
-            TID: '1',
-            subctype: 'bra',
-            num: 10
+        const fetchPromise =
+          typeof window.inffitsFetchCopilotStatus === 'function'
+            ? window.inffitsFetchCopilotStatus(Brand, '')
+            : fetch('https://api.inffits.com/pid_get_copilot_status/model', {
+                method: 'POST',
+                headers: { accept: 'application/json', 'content-type': 'application/json' },
+                body: JSON.stringify({
+                  Brand: Brand.toUpperCase(),
+                  Link: '',
+                  TID: '1',
+                  subctype: 'bra',
+                  num: 10
+                })
+              }).then((res) => res.json())
+
+        return fetchPromise
+          .then((copilotData) => {
+            const fallbackUrl =
+              (copilotData && copilotData.data && copilotData.data[0] && copilotData.data[0].Link) ||
+              document.location.href.split('?')[0]
+            return callModelAPI(fallbackUrl)
           })
-        })
-        .then((res) => res.json())
-        .then((copilotData) => {
-          const fallbackUrl = (copilotData && copilotData.data && copilotData.data[0] && copilotData.data[0].Link)
-            || document.location.href.split('?')[0]
-          return callModelAPI(fallbackUrl)
-        })
-        .catch(() => {
-          return callModelAPI(document.location.href.split('?')[0])
-        })
+          .catch(() => {
+            return callModelAPI(document.location.href.split('?')[0])
+          })
       } else {
         return callModelAPI(modelUrl)
       }

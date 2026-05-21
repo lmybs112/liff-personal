@@ -1,4 +1,45 @@
 ;(function () {
+  const brandConfigPromiseByBrand = new Map()
+
+  function fetchBrandConfigRecommendMode(brand) {
+    const cacheKey = (brand || '').toUpperCase()
+    if (brandConfigPromiseByBrand.has(cacheKey)) {
+      return brandConfigPromiseByBrand.get(cacheKey)
+    }
+
+    const promise = fetch('https://api.inffits.com/mkt_brand_config_proc/GetItems', {
+      method: 'POST',
+      headers: {
+        Accept: 'application/json',
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify({ Brand: brand })
+    })
+      .then((brandConfigResponse) => {
+        if (!brandConfigResponse.ok) {
+          throw new Error(`品牌配置 API 調用失敗: ${brandConfigResponse.status}`)
+        }
+        return brandConfigResponse.json()
+      })
+      .then((brandConfigResponseData) => {
+        const brandConfig = brandConfigResponseData.find(
+          (item) => item.Module === 'Product_Carousel_Widget'
+        )?.ConfigData?.Section_Info?.[0]
+
+        return {
+          recommendMode: brandConfig?.RecommendMode || null,
+          displayMode: brandConfig?.DisplayMode || null
+        }
+      })
+      .catch((error) => {
+        console.error('獲取品牌配置時發生錯誤:', error)
+        return { recommendMode: null, displayMode: null }
+      })
+
+    brandConfigPromiseByBrand.set(cacheKey, promise)
+    return promise
+  }
+
   function Product_Recommendation(config = {}) {
     // 解構參數並設置預設值
     const defaultConfig = {
@@ -84,38 +125,6 @@
     } = finalConfig
     let resolvedRecommendMode = recommendMode
     let resolvedDisplayMode = displayMode
-
-    async function fetchBrandConfigRecommendMode() {
-      try {
-        const brandConfigResponse = await fetch('https://api.inffits.com/mkt_brand_config_proc/GetItems', {
-          method: 'POST',
-          headers: {
-            Accept: 'application/json',
-            'Content-Type': 'application/json'
-          },
-          body: JSON.stringify({ Brand: Brand })
-        })
-
-        if (!brandConfigResponse.ok) {
-          throw new Error(`品牌配置 API 調用失敗: ${brandConfigResponse.status}`)
-        }
-
-        const brandConfigResponseData = await brandConfigResponse.json()
-        const brandConfig = brandConfigResponseData.find(
-          (item) => item.Module === 'Product_Carousel_Widget'
-        )?.ConfigData?.Section_Info?.[0]
-
-        // RecommendMode: 變更 recommendMode
-        if (brandConfig && brandConfig.RecommendMode) {
-          resolvedRecommendMode = brandConfig.RecommendMode
-        }
-        if (brandConfig && brandConfig.DisplayMode) {
-          resolvedDisplayMode = brandConfig.DisplayMode
-        }
-      } catch (error) {
-        console.error('獲取品牌配置時發生錯誤:', error)
-      }
-    }
 
     function getDisplayModeRecommendationItems(response) {
       const sizeAiPtrValid = resolvedRecommendMode
@@ -299,13 +308,15 @@
           CONFIG: 'on',
           '91APP': 'on'
         }
-        const options = {
-          method: 'POST',
-          headers: { accept: 'application/json', 'content-type': 'application/json' },
-          body: JSON.stringify(requestData)
-        }
-        return fetch(dataUrl, options)
-          .then((res) => res.json())
+        const fetchPromise = (typeof window.inffitsFetchModelData === 'function')
+          ? window.inffitsFetchModelData(Brand, urlVal)
+          : fetch(dataUrl, {
+              method: 'POST',
+              headers: { accept: 'application/json', 'content-type': 'application/json' },
+              body: JSON.stringify(requestData)
+            }).then((res) => res.json());
+
+        return fetchPromise
           .then((data) => {
             if (!data || !data.Gender_ClothID) return ''
             return parsePidFromGenderClothID(data.Gender_ClothID)
@@ -316,18 +327,21 @@
       const modelUrl = resolveModelUrlParam()
       if (!modelUrl) {
         // 當 resolveModelUrlParam() 抓不到時，改抓 pid_get_copilot_status/model 回傳的 data[0].Link
-        return fetch('https://api.inffits.com/pid_get_copilot_status/model', {
-          method: 'POST',
-          headers: { accept: 'application/json', 'content-type': 'application/json' },
-          body: JSON.stringify({
-            Brand: Brand.toUpperCase(),
-            Link: '',
-            TID: '1',
-            subctype: 'bra',
-            num: 10
-          })
-        })
-        .then((res) => res.json())
+        const fetchPromise = (typeof window.inffitsFetchCopilotStatus === 'function')
+          ? window.inffitsFetchCopilotStatus(Brand, '')
+          : fetch('https://api.inffits.com/pid_get_copilot_status/model', {
+              method: 'POST',
+              headers: { accept: 'application/json', 'content-type': 'application/json' },
+              body: JSON.stringify({
+                Brand: Brand.toUpperCase(),
+                Link: '',
+                TID: '1',
+                subctype: 'bra',
+                num: 10
+              })
+            }).then((res) => res.json());
+
+        return fetchPromise
         .then((copilotData) => {
           const fallbackUrl = (copilotData && copilotData.data && copilotData.data[0] && copilotData.data[0].Link)
             || document.location.href.split('?')[0]
@@ -1553,9 +1567,18 @@
       })(jQuery)
     }
     //jQuery loaded
-    fetchBrandConfigRecommendMode().finally(() => {
-      ensureEmbeddedAdJQueryLoaded(loadEmbeddedScript)
-    })
+    fetchBrandConfigRecommendMode(brand)
+      .then((brandConfig) => {
+        if (brandConfig.recommendMode) {
+          resolvedRecommendMode = brandConfig.recommendMode
+        }
+        if (brandConfig.displayMode) {
+          resolvedDisplayMode = brandConfig.displayMode
+        }
+      })
+      .finally(() => {
+        ensureEmbeddedAdJQueryLoaded(loadEmbeddedScript)
+      })
     // }
   }
   window.Product_Recommendation = Product_Recommendation

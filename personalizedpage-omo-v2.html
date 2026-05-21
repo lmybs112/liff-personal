@@ -4410,6 +4410,67 @@
         }
       })();
 
+      // 全域 Copilot / model 快取，避免 api_Products、試衣輪播、embedded-v2 重複呼叫
+      window.inffitsFetchCopilotStatus = window.inffitsFetchCopilotStatus || function (brand, linkVal) {
+        const cacheKey = `${(brand || '').toUpperCase()}_${linkVal || ''}`
+        window._copilotStatusPromises = window._copilotStatusPromises || {}
+        if (!window._copilotStatusPromises[cacheKey]) {
+          window._copilotStatusPromises[cacheKey] = fetch(
+            'https://api.inffits.com/pid_get_copilot_status/model',
+            {
+              method: 'POST',
+              headers: {
+                accept: 'application/json',
+                'Content-Type': 'application/json'
+              },
+              body: JSON.stringify({
+                Brand: (brand || '').toUpperCase(),
+                Link: linkVal || '',
+                TID: '1',
+                subctype: 'bra',
+                num: 10
+              })
+            }
+          )
+            .then((res) => {
+              if (!res.ok) throw new Error('API 回應異常')
+              return res.json()
+            })
+            .catch((err) => {
+              delete window._copilotStatusPromises[cacheKey]
+              throw err
+            })
+        }
+        return window._copilotStatusPromises[cacheKey]
+      }
+
+      window.inffitsFetchModelData = window.inffitsFetchModelData || function (brand, urlVal, extraPayload) {
+        const cacheKey = `${(brand || '').toUpperCase()}_${urlVal || ''}_${extraPayload ? JSON.stringify(extraPayload) : ''}`
+        window._modelDataPromises = window._modelDataPromises || {}
+        if (!window._modelDataPromises[cacheKey]) {
+          window._modelDataPromises[cacheKey] = fetch('https://api.inffits.com/httpgpi/model', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              Brand: brand,
+              url: urlVal,
+              CONFIG: 'on',
+              '91APP': 'on',
+              ...(extraPayload || {})
+            })
+          })
+            .then((res) => {
+              if (!res.ok) throw new Error('API 回應異常')
+              return res.json()
+            })
+            .catch((err) => {
+              delete window._modelDataPromises[cacheKey]
+              throw err
+            })
+        }
+        return window._modelDataPromises[cacheKey]
+      }
+
       const params = new URLSearchParams(window.location.search)
       let Brand = params.get('brand') || ''
       const randomGen = !!Brand ? 'false' : 'true'
@@ -4988,33 +5049,16 @@
 
       async function api_Products(Brand) {
   let Gender_ClothID;
-  let dataUrl = "https://api.inffits.com/httpgpi/model";
   let urlVal = link || '';
 
   if (!urlVal) {
     try {
-      const copilotRes = await fetch('https://api.inffits.com/pid_get_copilot_status/model', {
-        method: 'POST',
-        headers: {
-          'accept': 'application/json',
-          'Content-Type': 'application/json'
-        },
-        body: JSON.stringify({
-          Brand: Brand.toUpperCase(),
-          Link: '',
-          TID: '1',
-          subctype: 'bra',
-          num: 10
-        })
-      });
-      if (copilotRes.ok) {
-        const copilotData = await copilotRes.json();
-        if (copilotData && copilotData.data && copilotData.data[0] && copilotData.data[0].Link) {
-          urlVal = copilotData.data[0].Link;
-        }
+      const copilotData = await window.inffitsFetchCopilotStatus(Brand, '')
+      if (copilotData && copilotData.data && copilotData.data[0] && copilotData.data[0].Link) {
+        urlVal = copilotData.data[0].Link
       }
     } catch (e) {
-      console.error('抓取 copilot status 失敗：', e);
+      console.error('抓取 copilot status 失敗：', e)
     }
   }
 
@@ -5032,24 +5076,11 @@
     }
   }
 
-  let Payload = {
-    Brand: Brand,
-    url: urlVal,
-    CONFIG: "on",
-    DB: "on",
-    "91APP": "on",
-    hostname: hostnameVal
-  };
+  const modelExtra = { DB: 'on', hostname: hostnameVal }
 
-  await fetch(dataUrl, {
-    method: "POST",
-    headers: {
-      'Content-Type': 'application/json'
-    },
-    body: JSON.stringify(Payload)
-  })
-  .then(response => response.json())
-  .then(res => {
+  await window
+    .inffitsFetchModelData(Brand, urlVal, modelExtra)
+    .then((res) => {
     let Results = res;
     if (!Results || !Results["Gender_ClothID"]) {
       handleTryonIframeFallback()
@@ -5854,18 +5885,26 @@
             TRYON_COMPANION_SOURCE.subctype,
             TRYON_COMPANION_SOURCE.num
           )
-          const response = await fetch(TRYON_COPILOT_ENDPOINT, {
-            method: 'POST',
-            headers: {
-              accept: 'application/json',
-              'Content-Type': 'application/json'
-            },
-            body: JSON.stringify(payload)
-          })
-          if (!response.ok) {
-            throw new Error(`Copilot API 回應異常：${response.status}`)
+          let result
+          if (typeof window.inffitsFetchCopilotStatus === 'function') {
+            result = await window.inffitsFetchCopilotStatus(
+              TRYON_COMPANION_SOURCE.brand,
+              TRYON_COMPANION_SOURCE.Link
+            )
+          } else {
+            const response = await fetch(TRYON_COPILOT_ENDPOINT, {
+              method: 'POST',
+              headers: {
+                accept: 'application/json',
+                'Content-Type': 'application/json'
+              },
+              body: JSON.stringify(payload)
+            })
+            if (!response.ok) {
+              throw new Error(`Copilot API 回應異常：${response.status}`)
+            }
+            result = await response.json()
           }
-          const result = await response.json()
           const normalized = TryonCarouselUtils.transformCopilotPayload(result)
           renderTryonCompanion(normalized)
           tryonCompanionAssetsLoaded = true
