@@ -7,6 +7,8 @@
       customEdm: [],
       backgroundColor: '#fff', // 默認背景色為黑色
       title: '推薦您也可以這樣搭配', // 默認標題文字
+      displayMode: 'SaleRate',
+      recommendMode: 'bhv,corr,sp_atc,sp_trans',
       customPadding: null,
       arrowPosition: 'center', // 默認箭頭位置
       autoplay: true, // 默認開啓輪播
@@ -41,15 +43,6 @@
           slidesPerView: 3,
           slidesPerGroup: 3,
           spaceBetween: 24,
-          speed: 750,
-          mousewheel: {
-            enabled: true,
-            sensitivity: 1
-          },
-          longSwipes: true,
-          longSwipesRatio: 0.4,
-          followFinger: true,
-          threshold: 10,
           loopFillGroupWithBlank: true // 確保桌面版也能正確填充
         },
         0: {
@@ -66,31 +59,10 @@
     const finalConfig = {
       ...defaultConfig,
       ...config,
-      breakpoints: Object.keys({
+      breakpoints: {
         ...defaultConfig.breakpoints,
         ...(config?.breakpoints || {})
-      }).reduce((acc, key) => {
-        acc[key] = {
-          ...(defaultConfig.breakpoints[key] || {}),
-          ...((config?.breakpoints || {})[key] || {})
-        }
-
-        if ((defaultConfig.breakpoints[key] || {}).grid || ((config?.breakpoints || {})[key] || {}).grid) {
-          acc[key].grid = {
-            ...((defaultConfig.breakpoints[key] || {}).grid || {}),
-            ...((((config?.breakpoints || {})[key] || {}).grid) || {})
-          }
-        }
-
-        if ((defaultConfig.breakpoints[key] || {}).mousewheel || ((config?.breakpoints || {})[key] || {}).mousewheel) {
-          acc[key].mousewheel = {
-            ...((defaultConfig.breakpoints[key] || {}).mousewheel || {}),
-            ...((((config?.breakpoints || {})[key] || {}).mousewheel) || {})
-          }
-        }
-
-        return acc
-      }, {})
+      }
     }
 
     // 解構出常用參數
@@ -104,10 +76,90 @@
       bid,
       backgroundColor,
       title,
+      displayMode,
+      recommendMode,
       autoplay,
       arrowPosition,
       customPadding
     } = finalConfig
+    let resolvedRecommendMode = recommendMode
+    let resolvedDisplayMode = displayMode
+
+    async function fetchBrandConfigRecommendMode() {
+      try {
+        const brandConfigResponse = await fetch('https://api.inffits.com/mkt_brand_config_proc/GetItems', {
+          method: 'POST',
+          headers: {
+            Accept: 'application/json',
+            'Content-Type': 'application/json'
+          },
+          body: JSON.stringify({ Brand: Brand })
+        })
+
+        if (!brandConfigResponse.ok) {
+          throw new Error(`品牌配置 API 調用失敗: ${brandConfigResponse.status}`)
+        }
+
+        const brandConfigResponseData = await brandConfigResponse.json()
+        const brandConfig = brandConfigResponseData.find(
+          (item) => item.Module === 'Product_Carousel_Widget'
+        )?.ConfigData?.Section_Info?.[0]
+
+        // RecommendMode: 變更 recommendMode
+        if (brandConfig && brandConfig.RecommendMode) {
+          resolvedRecommendMode = brandConfig.RecommendMode
+        }
+        if (brandConfig && brandConfig.DisplayMode) {
+          resolvedDisplayMode = brandConfig.DisplayMode
+        }
+      } catch (error) {
+        console.error('獲取品牌配置時發生錯誤:', error)
+      }
+    }
+
+    function getDisplayModeRecommendationItems(response) {
+      const sizeAiPtrValid = resolvedRecommendMode
+        ? resolvedRecommendMode.split(',').map((item) => item.trim()).filter(Boolean)
+        : ['bhv']
+      const recommendationLimit = 12
+      const normalizedModes = sizeAiPtrValid.reduce((result, mode) => {
+        if (mode === 'sp_atc_sp_trans') {
+          result.push('sp_atc', 'sp_trans')
+          return result
+        }
+        result.push(mode)
+        return result
+      }, [])
+
+      let modePriority = normalizedModes
+
+      if (resolvedDisplayMode === 'SaleRate') {
+        modePriority = ['bhv', 'corr', 'sp_atc', 'sp_trans'].filter((mode) =>
+          normalizedModes.includes(mode)
+        )
+      } else if (resolvedDisplayMode === 'SocialProofNum') {
+        modePriority = ['sp_atc', 'sp_trans'].filter((mode) => normalizedModes.includes(mode))
+      }
+
+      const sourceData = []
+      const seenIds = new Set()
+
+      modePriority.forEach((mode) => {
+        if (sourceData.length >= recommendationLimit) return
+        const sourceItems = Array.isArray(response[mode]) ? response[mode] : []
+        sourceItems.forEach((item) => {
+          if (sourceData.length >= recommendationLimit) return
+          const itemId = item.id || item.pid || item.productid || item.link
+          if (!itemId || seenIds.has(itemId)) return
+          seenIds.add(itemId)
+          const newItem = Object.assign({}, item)
+          newItem.event_recom = mode
+          sourceData.push(newItem)
+        })
+      })
+
+      return sourceData
+    }
 
     function shouldUseShareUrlFormat() {
       try {
@@ -270,9 +322,8 @@
         embeddedAdjQueryScript.type = 'text/javascript'
         embeddedAdjQueryScript.onload = function () {
           // console.log("jQuery 已成功載入");
-          loadSwiperScript().then(function () {
-            callback() // 再執行嵌入腳本
-          })
+          loadSwiperScript() // 先載入 Swiper
+          callback() // 再執行嵌入腳本
         }
         embeddedAdjQueryScript.onerror = function () {
           console.error('載入 jQuery 時出錯')
@@ -280,56 +331,27 @@
         document.head.appendChild(embeddedAdjQueryScript)
       } else {
         // console.log("jQuery 已經載入");
-        loadSwiperScript().then(function () {
-          callback() // 再執行嵌入腳本
-        })
+        loadSwiperScript() // 先載入 Swiper
+        callback() // 再執行嵌入腳本
       }
     }
 
     //swiper
     function loadSwiperScript() {
-      if (typeof window.Swiper !== 'undefined') {
-        return Promise.resolve()
+      var swiperStylesheet = document.createElement('link')
+      swiperStylesheet.rel = 'stylesheet'
+      swiperStylesheet.href = 'https://cdn.jsdelivr.net/npm/swiper@11/swiper-bundle.min.css'
+      document.head.appendChild(swiperStylesheet)
+
+      var SwiperScript = document.createElement('script')
+      SwiperScript.src = 'https://cdn.jsdelivr.net/npm/swiper@11/swiper-bundle.min.js'
+      SwiperScript.onload = function () {
+        // console.log("Swiper script loaded successfully");
       }
-
-      if (window.__embeddedSwiperPromise) {
-        return window.__embeddedSwiperPromise
+      SwiperScript.onerror = function () {
+        console.error('Error loading Swiper script')
       }
-
-      window.__embeddedSwiperPromise = new Promise(function (resolve, reject) {
-        var existingScript = document.querySelector('script[data-embedded-swiper="1"]')
-        if (existingScript) {
-          existingScript.addEventListener('load', function () {
-            resolve()
-          })
-          existingScript.addEventListener('error', function () {
-            reject(new Error('Error loading Swiper script'))
-          })
-          return
-        }
-
-        var swiperStylesheetExists = document.querySelector('link[data-embedded-swiper="1"]')
-        if (!swiperStylesheetExists) {
-          var swiperStylesheet = document.createElement('link')
-          swiperStylesheet.rel = 'stylesheet'
-          swiperStylesheet.href = 'https://cdn.jsdelivr.net/npm/swiper@11/swiper-bundle.min.css'
-          swiperStylesheet.setAttribute('data-embedded-swiper', '1')
-          document.head.appendChild(swiperStylesheet)
-        }
-
-        var SwiperScript = document.createElement('script')
-        SwiperScript.src = 'https://cdn.jsdelivr.net/npm/swiper@11/swiper-bundle.min.js'
-        SwiperScript.setAttribute('data-embedded-swiper', '1')
-        SwiperScript.onload = function () {
-          resolve()
-        }
-        SwiperScript.onerror = function () {
-          reject(new Error('Error loading Swiper script'))
-        }
-        document.head.appendChild(SwiperScript)
-      })
-
-      return window.__embeddedSwiperPromise
+      document.head.appendChild(SwiperScript)
     }
     //embedded script
     function loadEmbeddedScript($) {
@@ -636,7 +658,7 @@
                           // bottom:9.5px;
                           // right:9.5px;
                           bottom: 3%;
-                          left: 3%;
+                          right: 3%;
                           border-radius: 40px;
                           background: rgba(255, 255, 255, 0.70);
                           backdrop-filter: blur(6px);
@@ -659,7 +681,7 @@
                           #${containerId} .embeddedAdContainer .embeddedAdImgContainer .embeddedItem .embeddedItem__img .embeddedItem__sizeTag {
                             position:absolute;
                             bottom:12px;
-                            left:12px;
+                            right:12px;
                             border-radius: 40px;
                             background: rgba(255, 255, 255, 0.70);
                             backdrop-filter: blur(6px);display: flex;
@@ -868,9 +890,10 @@
         document.head.appendChild(customCSS)
 
         $(function () {
+          let idsPromise = ids_init()
 
           // console.log("DOM is ready");
-          $(show_up_position_before).empty().append(
+          $(show_up_position_before).append(
             `<div id="recommendation-loading">
               <span class="loading-text">Loading...</span>
             </div>`
@@ -1017,28 +1040,9 @@
           //     document.getElementById('embedded-ad-bootstrap-scoped').textContent = scopedCSS
           //   })
 
-          // 如果已有 customEdm 資料（由外部（如兩階段推薦）直接傳入），跳過 API call，直接渲染
-          if (customEdm && customEdm.length > 0) {
-            const jsonData = customEdm.map((item) => {
-              let newItem = Object.assign({}, item)
-              newItem.sale_price = hide_discount
-                ? null
-                : item.sale_price
-                  ? parseInt(String(item.sale_price).replace(/\D/g, '')).toLocaleString()
-                  : ''
-              newItem.price = item.price
-                ? parseInt(String(item.price).replace(/\D/g, '')).toLocaleString()
-                : '0'
-              return newItem
-            })
-            if (jsonData.length > 0) {
-              updatePopAd(jsonData)
-            }
-          } else {
-            ids_init().then(function (ids) {
-              getEmbeddedAds(ids)
-            })
-          }
+          idsPromise.then(function (ids) {
+            getEmbeddedAds(ids)
+          })
           // getEmbeddedAds_corr(ids);
         })
 
@@ -1047,12 +1051,14 @@
           const link = $(this).data('link') // 取得 data-link 屬性
 
           // 觸發 Google Analytics 的事件追蹤
-          gtag('event', 'click_embedded_item' + test, {
-            send_to: GA4Key,
-            event_category: 'embedded',
-            event_label: title,
-            event_value: link
-          })
+          if (typeof gtag === 'function' && GA4Key) {
+            gtag('event', 'click_embedded_item' + test, {
+              send_to: GA4Key,
+              event_category: 'embedded',
+              event_label: title,
+              event_value: link
+            })
+          }
         })
         $(document).on('click', `#${containerId} .a-left`, function () {
           // 觸發 Google Analytics 的事件追蹤
@@ -1196,8 +1202,8 @@
             "series_out": "[\"成長型\"]",
             PID: ids.skuContent,
             SP_PID:"xxSOCIAL PROOF",
-            SIZEAI_ptr:"bhv"
-          }: brand.toLocaleUpperCase() === 'CLARKS' ? {
+            SIZEAI_ptr: resolvedRecommendMode || 'bhv'
+          } :  brand.toLocaleUpperCase() === 'CLARKS' ? {
             Brand: Brand,
             LGVID: ids.lgiven_id,
             MRID: ids.member_id,
@@ -1205,15 +1211,15 @@
             "series_out": "[\"女\"]",
             PID: ids.skuContent,
             SP_PID:"xxSOCIAL PROOF",
-            SIZEAI_ptr:"bhv"
-          } : {
+            SIZEAI_ptr: resolvedRecommendMode || 'bhv'
+          }:{
             Brand: Brand,
             LGVID: ids.lgiven_id,
             MRID: ids.member_id,
             recom_num: '12', // 請求12個商品，確保數量充足
             PID: ids.skuContent,
             SP_PID:"xxSOCIAL PROOF",
-            SIZEAI_ptr:"bhv"
+            SIZEAI_ptr: resolvedRecommendMode || 'bhv'
           }
           if (ctype_val && ctype_val.length > 0) {
             requestData.ctype_val = JSON.stringify(ctype_val)
@@ -1247,9 +1253,9 @@
 
             return result
           }
-          const api_recom_product_url = brand.toLocaleUpperCase() === 'DABE' ||  brand.toLocaleUpperCase() === 'CLARKS' ? 'HTTP_stock_cdp_product_recommendation':'HTTP_inf_alpha_bhv_cdp_product_recommendation'
+          const api_recom_product_url = brand.toLocaleUpperCase() === 'DABE' || brand.toLocaleUpperCase() === 'CLARKS' ? 'HTTP_stock_cdp_product_recommendation':'HTTP_inf_alpha_bhv_cdp_product_recommendation'
           fetch(
-            brand.toLocaleUpperCase() === 'ANNS' ? 'https://api.inffits.com/HTTP_pidinfo_cdp_product_recommendation/extension/recom_product' : `https://api.inffits.com/${api_recom_product_url}/extension/recom_product`,
+            `https://api.inffits.com/${api_recom_product_url}/extension/recom_product`,
             // 'https://api.inffits.com/HTTP_inf_bhv_cdp_product_recommendation/extension/recom_product',
             // 'https://gha6kqf5ff.execute-api.ap-northeast-1.amazonaws.com/v0/extension/recom_product',
             options
@@ -1287,11 +1293,19 @@
                     item.size_tag = size_tag[item.id]
                   })
                 }
+                if (response['sp_atc']) {
+                  response['sp_atc'].forEach((item) => {
+                    item.size_tag = size_tag[item.id]
+                  })
+                }
+                if (response['sp_trans']) {
+                  response['sp_trans'].forEach((item) => {
+                    item.size_tag = size_tag[item.id]
+                  })
+                }
               }
 
-              //corr
-              //or let jsonData_corr = getRandomElements(response['corr'], 12).map((item) => {})
-              //bhv
+              const orderedRecommendationItems = getDisplayModeRecommendationItems(response)
               let jsonData =
                 customEdm && customEdm.length > 0
                   ? customEdm.map((item) => {
@@ -1305,8 +1319,8 @@
                       return newItem
                     })
                   : getRandomElements(
-                      response['bhv'],
-                      response['bhv'].length > 12 ? 12 : response['bhv'].length
+                      orderedRecommendationItems,
+                      orderedRecommendationItems.length > 12 ? 12 : orderedRecommendationItems.length
                     ).map((item) => {
                       let newItem = Object.assign({}, item)
                       newItem.sale_price = hide_discount
@@ -1338,16 +1352,6 @@
         }
 
         function updatePopAd(images, corr_bool) {
-          if (typeof Swiper === 'undefined') {
-            loadSwiperScript()
-              .then(function () {
-                updatePopAd(images, corr_bool)
-              })
-              .catch(function (err) {
-                console.error(err)
-              })
-            return
-          }
           // 直接使用原始商品，讓 Swiper 自動處理不足的情況
           let displayImages = images;
           
@@ -1373,7 +1377,7 @@
               return `
     <a class="embeddedItem swiper-slide" href="${
       hrefValue
-    }" target="_blank" data-title="${img.title}" data-link="${img.link}" data-pid="${img.pid || img.id || img.productid || ''}">
+    }" target="_blank" data-title="${img.title}" data-link="${img.link}">
       <div class="embeddedItem__img" style="position:relative;">
       <div class="embeddedItem__imgBox" style="background-color:#efefef;">
       ${img.size_tag ? `<div class="embeddedItem__sizeTag">${img.size_tag}</div>` : ''}
@@ -1412,17 +1416,16 @@
             direction: 'horizontal',
             loop: true, // 啟用無限輪播
             pagination: false,
-            speed: 750,
-            autoplay: autoplay
-              ? {
+            autoplay: !autoplay
+              ? false
+              : {
                   delay: 4000,
                   disableOnInteraction: false,
                   pauseOnMouseEnter: true,
                   // 重要：確保自動播放不會在切換頁面時出錯
                   stopOnLastSlide: false,
                   waitForTransition: true
-                }
-              : false,
+                },
 
             // 保持簡單的基礎設定
             slidesPerView: 1,
@@ -1437,13 +1440,8 @@
             },
 
             // 简化触摸设置以适应所有设备
-            allowTouchMove: true,
             simulateTouch: true,
             touchRatio: 1,
-            longSwipes: true,
-            longSwipesRatio: 0.4,
-            followFinger: true,
-            threshold: 10,
             resistance: true,
             resistanceRatio: 0.65,
 
@@ -1496,10 +1494,8 @@
                     })
                   })
                 }
-                $(`#${containerId} #recommendation-loading`).fadeOut(300, function () {
-                  const $container = $(`#${containerId} .embeddedAdContainer`)
-                  $container.css({ display: 'block', opacity: 0 })
-                  $container.animate({ opacity: 1 }, 350)
+                $(`#${containerId} #recommendation-loading`).fadeOut(400, function () {
+                  $(`#${containerId} .embeddedAdContainer`).show()
                 })
               },
 
@@ -1527,7 +1523,9 @@
       })(jQuery)
     }
     //jQuery loaded
-    ensureEmbeddedAdJQueryLoaded(loadEmbeddedScript)
+    fetchBrandConfigRecommendMode().finally(() => {
+      ensureEmbeddedAdJQueryLoaded(loadEmbeddedScript)
+    })
     // }
   }
   window.Product_Recommendation = Product_Recommendation
