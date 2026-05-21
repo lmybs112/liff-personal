@@ -4441,9 +4441,42 @@
       async function api_Products(Brand) {
   let Gender_ClothID;
   let dataUrl = "https://api.inffits.com/httpgpi/model";
+  let urlVal = link || '';
+
+  if (!urlVal) {
+    try {
+      const copilotRes = await fetch('https://api.inffits.com/pid_get_copilot_status/model', {
+        method: 'POST',
+        headers: {
+          'accept': 'application/json',
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({
+          Brand: Brand.toUpperCase(),
+          Link: '',
+          TID: '1',
+          subctype: 'bra',
+          num: 10
+        })
+      });
+      if (copilotRes.ok) {
+        const copilotData = await copilotRes.json();
+        if (copilotData && copilotData.data && copilotData.data[0] && copilotData.data[0].Link) {
+          urlVal = copilotData.data[0].Link;
+        }
+      }
+    } catch (e) {
+      console.error('抓取 copilot status 失敗：', e);
+    }
+  }
+
+  if (!urlVal) {
+    urlVal = Brand;
+  }
+
   let Payload = {
     Brand: Brand,
-    url: link || Brand,
+    url: urlVal,
     CONFIG: "on",
     // DB: "on"
     "91APP": "on"
