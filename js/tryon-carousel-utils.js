@@ -62,12 +62,18 @@
    * 產生 Copilot API 所需的 request payload
    * @param {string} brand
    * @param {string} Link
-   * @returns {{Brand: string, Link: string}}
+   * @param {string} TID
+   * @param {string} subctype
+   * @param {number} num
+   * @returns {{Brand: string, Link: string, TID: string, subctype: string, num: number}}
    */
-  function createCopilotPayload(brand, Link) {
+  function createCopilotPayload(brand, Link, TID, subctype, num) {
     return {
       Brand: (brand || '').trim().toUpperCase(),
-      Link: (Link || '').trim()
+      Link: (Link || '').trim(),
+      TID: (TID || '').trim(),
+      subctype: (subctype || '').trim(),
+      num: (num || 10)
     }
   }
 

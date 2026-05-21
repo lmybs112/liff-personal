@@ -275,3 +275,27 @@ Content-Type: application/json
 ###
 ### ===========================================
 
+
+###
+POST https://api.inffits.com/pid_get_copilot_status/model
+Content-Type: application/json
+
+{
+  "Brand": "MDMR",
+  "Link": "https://brashop.modemarie.com.tw/SalePage/Index/11612163",	
+  "TID": "1",
+  "subctype": "bra",
+  "num": 10
+}
+###
+
+
+###
+###
+POST https://api.inffits.com/pid_get_copilot_status/model
+Content-Type: application/json
+
+{
+  "Brand": "MDMR",
+  "Link": "https://brashop.modemarie.com.tw/SalePage/Index/11612163"
+}

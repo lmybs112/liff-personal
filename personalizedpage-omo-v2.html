@@ -4423,7 +4423,10 @@
       const TRYON_COMPANION_SOURCE = {
         brand: Brand,
         // productId: '10108161',
-        Link: link
+        Link: link,
+        TID: "1",
+        subctype: "bra",
+        num: 10
       }
       const tryonCarouselState = {
         images: [],
@@ -5803,7 +5806,10 @@
           const payload = TryonCarouselUtils.createCopilotPayload(
             TRYON_COMPANION_SOURCE.brand,
             // TRYON_COMPANION_SOURCE.productId
-            TRYON_COMPANION_SOURCE.Link
+            TRYON_COMPANION_SOURCE.Link,
+            TRYON_COMPANION_SOURCE.TID,
+            TRYON_COMPANION_SOURCE.subctype,
+            TRYON_COMPANION_SOURCE.num
           )
           const response = await fetch(TRYON_COPILOT_ENDPOINT, {
             method: 'POST',

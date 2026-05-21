@@ -667,6 +667,10 @@
         flex: 1;
       }
 
+      .tryon-qr__meta #tryonScrollViewAll {
+        display: none !important;
+      }
+
       .tryon-qr__name {
         color: #1e1e19;
         font-size: 18px;
@@ -3880,7 +3884,10 @@
       const TRYON_COMPANION_SOURCE = {
         brand: Brand,
         // productId: '10108161',
-        Link: link
+        Link: link,
+        TID: "1",
+        subctype: "bra",
+        num: 10
       }
       const tryonCarouselState = {
         images: [],
@@ -4713,6 +4720,12 @@
           scrollGallery.style.display = 'none'
         }
         
+        // 左側顯示「穿搭靈感推薦」時（fallback），隱藏右側「查看更多穿搭靈感」按鈕
+        const qrMetaButton = document.querySelector('.tryon-qr__meta #tryonScrollViewAll')
+        if (qrMetaButton) {
+          qrMetaButton.style.display = 'none'
+        }
+        
         renderTryonGalleryInline()
       }
 
@@ -4899,6 +4912,12 @@
                   <span class="tryon-side-panel-dock__expand-label">開啟試衣間</span>
                 </span>
                 </div>
+                <div class="tryon-scroll-gallery" aria-live="polite" style="display: none;">
+                  <button type="button" class="tryon-scroll-gallery__cta" id="tryonScrollViewAll" disabled>
+                    <span class="tryon-scroll-gallery__cta-label">查看更多穿搭靈感</span>
+                  </button>
+                  <p class="tryon-scroll-gallery__count" id="tryonScrollCount">載入穿搭靈感中...</p>
+              </div>
 
                 <div class="tryon-gallery-modal" id="tryonGalleryModal" aria-hidden="true">
                   <div class="tryon-gallery-modal__overlay" id="tryonGalleryModalOverlay"></div>
@@ -5218,7 +5237,10 @@
           const payload = TryonCarouselUtils.createCopilotPayload(
             TRYON_COMPANION_SOURCE.brand,
             // TRYON_COMPANION_SOURCE.productId
-            TRYON_COMPANION_SOURCE.Link
+            TRYON_COMPANION_SOURCE.Link,
+            TRYON_COMPANION_SOURCE.TID,
+            TRYON_COMPANION_SOURCE.subctype,
+            TRYON_COMPANION_SOURCE.num
           )
           const response = await fetch(TRYON_COPILOT_ENDPOINT, {
             method: 'POST',
