@@ -332,13 +332,17 @@
           : fetch('https://api.inffits.com/pid_get_copilot_status/model', {
               method: 'POST',
               headers: { accept: 'application/json', 'content-type': 'application/json' },
-              body: JSON.stringify({
-                Brand: Brand.toUpperCase(),
-                Link: '',
-                TID: '1',
-                subctype: 'bra',
-                num: 10
-              })
+              body: JSON.stringify(
+                typeof window.inffitsBuildCopilotPayload === 'function'
+                  ? window.inffitsBuildCopilotPayload(Brand, '')
+                  : {
+                      Brand: Brand.toUpperCase(),
+                      Link: '',
+                      TID: '1',
+                      subctype: 'bra',
+                      num: 10
+                    }
+              )
             }).then((res) => res.json());
 
         return fetchPromise

@@ -68,13 +68,17 @@
    * @returns {{Brand: string, Link: string, TID: string, subctype: string, num: number}}
    */
   function createCopilotPayload(brand, Link, TID, subctype, num) {
-    return {
-      Brand: (brand || '').trim().toUpperCase(),
-      Link: (Link || '').trim(),
-      TID: (TID || '').trim(),
-      subctype: (subctype || '').trim(),
-      num: (num || 10)
+    const normalizedLink = (Link || '').trim()
+    const payload = { Brand: (brand || '').trim().toUpperCase() }
+    if (normalizedLink) {
+      payload.Link = normalizedLink
+      return payload
     }
+    payload.Link = ''
+    payload.TID = (TID || '1').trim() || '1'
+    payload.subctype = (subctype || 'bra').trim() || 'bra'
+    payload.num = num || 10
+    return payload
   }
 
   /**

@@ -4410,6 +4410,21 @@
         }
       })();
 
+      // Link 有值只送 Brand + Link；Link 為空才送 TID / subctype / num
+      window.inffitsBuildCopilotPayload = window.inffitsBuildCopilotPayload || function (brand, linkVal) {
+        const normalizedLink = (linkVal || '').trim()
+        const payload = { Brand: (brand || '').toUpperCase() }
+        if (normalizedLink) {
+          payload.Link = normalizedLink
+          return payload
+        }
+        payload.Link = ''
+        payload.TID = '1'
+        payload.subctype = 'bra'
+        payload.num = 10
+        return payload
+      }
+
       // 全域 Copilot / model 快取，避免 api_Products、試衣輪播、embedded-v2 重複呼叫
       window.inffitsFetchCopilotStatus = window.inffitsFetchCopilotStatus || function (brand, linkVal) {
         const cacheKey = `${(brand || '').toUpperCase()}_${linkVal || ''}`
@@ -4423,13 +4438,7 @@
                 accept: 'application/json',
                 'Content-Type': 'application/json'
               },
-              body: JSON.stringify({
-                Brand: (brand || '').toUpperCase(),
-                Link: linkVal || '',
-                TID: '1',
-                subctype: 'bra',
-                num: 10
-              })
+              body: JSON.stringify(window.inffitsBuildCopilotPayload(brand, linkVal))
             }
           )
             .then((res) => {
@@ -4481,6 +4490,8 @@
       const tryOn = params.get('tryon') || 'false'
       const type = params.get('type') || 'pd'
       const TRYON_COPILOT_ENDPOINT = 'https://api.inffits.com/pid_get_copilot_status/model'
+      const TRYON_IFRAME_READY_TIMEOUT_MS = 15000
+      const TRYON_IFRAME_LOAD_FALLBACK_MS = 8000
       const TRYON_COMPANION_SOURCE = {
         brand: Brand,
         // productId: '10108161',
@@ -5053,7 +5064,7 @@
 
   if (!urlVal) {
     try {
-      const copilotData = await window.inffitsFetchCopilotStatus(Brand, '')
+      const copilotData = await window.inffitsFetchCopilotStatus(Brand, link)
       if (copilotData && copilotData.data && copilotData.data[0] && copilotData.data[0].Link) {
         urlVal = copilotData.data[0].Link
       }
@@ -5096,44 +5107,61 @@
     // 定義用於 iframe 錯誤處理的變量
     let SizeAIFast_switch = true;
     let iframeReadyTimeout = null;
+    let iframeAbsoluteTimeout = null;
     let iframeReadyHandler = null;
-    
-    
-    // 設置 iframe 錯誤處理和超時機制
+
     function setupIframeErrorHandling(iframe) {
-      // 清除之前的超時
       if (iframeReadyTimeout) {
         clearTimeout(iframeReadyTimeout);
+        iframeReadyTimeout = null;
       }
-      
-      // 設置超時機制：如果 3 秒內沒有收到 IDRxReady 消息，觸發 fallback（快速響應避免顯示 404）
-      iframeReadyTimeout = setTimeout(() => {
-        console.warn('Iframe 載入超時（可能為 404 或其他錯誤），觸發 fallback');
-        handleTryonIframeFallback();
-      }, 3000);
-      
-      // 監聽 iframe load 事件（雖然跨域可能無法完全檢測，但可以作為輔助）
-      iframe.addEventListener('load', () => {
-        // 嘗試檢查 iframe 是否成功載入
-        try {
-          // 如果跨域，這裡可能會拋出錯誤，但我們已經有超時機制作為備份
-          const iframeDoc = iframe.contentDocument || iframe.contentWindow?.document;
-          if (!iframeDoc) {
-            // 跨域情況，依賴超時機制和消息監聽
-            return;
-          }
-        } catch (e) {
-          // 跨域錯誤，這是正常的，依賴超時機制和消息監聽
-        }
-      });
-      
-      // 監聽 iframe error 事件
-      iframe.addEventListener('error', () => {
-        console.warn('Iframe 載入錯誤（可能為 404），觸發 fallback');
+      if (iframeAbsoluteTimeout) {
+        clearTimeout(iframeAbsoluteTimeout);
+        iframeAbsoluteTimeout = null;
+      }
+
+      function clearIframeReadyTimers() {
         if (iframeReadyTimeout) {
           clearTimeout(iframeReadyTimeout);
+          iframeReadyTimeout = null;
         }
+        if (iframeAbsoluteTimeout) {
+          clearTimeout(iframeAbsoluteTimeout);
+          iframeAbsoluteTimeout = null;
+        }
+      }
+
+      function triggerIframeReadyFallback(reason) {
+        clearIframeReadyTimers();
+        console.warn(reason);
         handleTryonIframeFallback();
+      }
+
+      function armIframeReadyTimeout() {
+        if (iframeReadyTimeout) clearTimeout(iframeReadyTimeout);
+        iframeReadyTimeout = setTimeout(() => {
+          triggerIframeReadyFallback(
+            'Iframe 載入超時（iframe 內 Brand_json_call 可能較慢或未回傳 IDRxReady），觸發 fallback'
+          );
+        }, TRYON_IFRAME_READY_TIMEOUT_MS);
+      }
+
+      iframe.addEventListener(
+        'load',
+        () => {
+          armIframeReadyTimeout();
+        },
+        { once: true }
+      );
+
+      iframeAbsoluteTimeout = setTimeout(() => {
+        if (!iframeReadyTimeout) {
+          armIframeReadyTimeout();
+        }
+      }, TRYON_IFRAME_LOAD_FALLBACK_MS);
+
+      iframe.addEventListener('error', () => {
+        triggerIframeReadyFallback('Iframe 載入錯誤（可能為 404），觸發 fallback');
       });
     }
     
@@ -5149,7 +5177,11 @@
           clearTimeout(iframeReadyTimeout);
           iframeReadyTimeout = null;
         }
-        
+        if (iframeAbsoluteTimeout) {
+          clearTimeout(iframeAbsoluteTimeout);
+          iframeAbsoluteTimeout = null;
+        }
+
         // 成功載入後才顯示 iframe 容器（確保不會顯示 404）
         const iframeContainer = document.getElementById('inffits_cblock');
         const loadingEl = document.getElementById('tryonIframeLoading');
@@ -5292,7 +5324,7 @@
         iframeUrl = shoesBase + (shoesQ.toString() ? '?' + shoesQ.toString() : '');
 
         // 直接設置 iframe src（在隱藏狀態下載入）
-        // 只有收到 IDRxReady 消息後才會顯示，如果 3 秒內沒收到消息則觸發 fallback
+        // 只有收到 IDRxReady 消息後才會顯示；iframe load 後逾時才觸發 fallback
         ctryonWindow.setAttribute('src', iframeUrl);
         setupIframeErrorHandling(ctryonWindow);
       } else {
@@ -5300,7 +5332,7 @@
           Brand.toLowerCase() + '.html?' + Gender_ClothID;
 
         // 直接設置 iframe src（在隱藏狀態下載入）
-        // 只有收到 IDRxReady 消息後才會顯示，如果 3 秒內沒收到消息則觸發 fallback
+        // 只有收到 IDRxReady 消息後才會顯示；iframe load 後逾時才觸發 fallback
         ctryonWindow.setAttribute('src', iframeUrl);
         setupIframeErrorHandling(ctryonWindow);
       }
