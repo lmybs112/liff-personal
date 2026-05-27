@@ -1118,10 +1118,6 @@
         flex: 1;
       }
 
-      .tryon-qr__meta #tryonScrollViewAll {
-        display: none !important;
-      }
-
       .tryon-qr__name {
         color: #1e1e19;
         font-size: 18px;
@@ -5384,7 +5380,7 @@
         }
         
         // 左側顯示「穿搭靈感推薦」時（fallback），隱藏右側「查看更多穿搭靈感」按鈕
-        const qrMetaButton = document.querySelector('.tryon-qr__meta #tryonScrollViewAll')
+        const qrMetaButton = document.querySelector('.tryon-qr__meta [data-tryon-scroll-view-all]')
         if (qrMetaButton) {
           qrMetaButton.style.display = 'none'
         }
@@ -5533,7 +5529,7 @@
                         前往商品頁
                       </a>
 
-                      <button type="button" class="tryon-scroll-gallery__cta" id="tryonScrollViewAll" disabled>
+                      <button type="button" class="tryon-scroll-gallery__cta" data-tryon-scroll-view-all disabled>
                         <span class="tryon-scroll-gallery__cta-label">查看更多穿搭靈感</span>
                       </button>
                     </div>
@@ -5592,7 +5588,7 @@
                 </span>
                 </div>
                 <div class="tryon-scroll-gallery" aria-live="polite" style="display: none;">
-                  <button type="button" class="tryon-scroll-gallery__cta" id="tryonScrollViewAll" disabled>
+                  <button type="button" class="tryon-scroll-gallery__cta" data-tryon-scroll-view-all disabled>
                     <span class="tryon-scroll-gallery__cta-label">查看更多穿搭靈感</span>
                   </button>
                   <p class="tryon-scroll-gallery__count" id="tryonScrollCount">載入穿搭靈感中...</p>
@@ -6427,7 +6423,7 @@
        */
       function updateTryonScrollButtonState() {
         const countEl = document.getElementById('tryonScrollCount')
-        const ctaEls = document.querySelectorAll('#tryonScrollViewAll')
+        const ctaEls = document.querySelectorAll('[data-tryon-scroll-view-all]')
         if (!countEl || !ctaEls.length) return
         const total = tryonScrollCarouselState.images.length
         const shouldPulse =
@@ -6459,7 +6455,7 @@
        * @param {boolean} isActive
        */
       function toggleTryonScrollCtaPulse(isActive) {
-        const ctaEls = document.querySelectorAll('#tryonScrollViewAll')
+        const ctaEls = document.querySelectorAll('[data-tryon-scroll-view-all]')
         if (!ctaEls.length) return
         ctaEls.forEach((ctaEl) => {
           if (!ctaEl) return
@@ -6632,7 +6628,7 @@
         if (countEl) {
           countEl.textContent = message || '暫無穿搭圖片'
         }
-        const ctaEls = document.querySelectorAll('#tryonScrollViewAll')
+        const ctaEls = document.querySelectorAll('[data-tryon-scroll-view-all]')
         ctaEls.forEach((ctaEl) => {
           ctaEl.disabled = true
           ctaEl.setAttribute('aria-disabled', 'true')
@@ -6654,12 +6650,13 @@
        */
       function bindTryonScrollControls() {
         if (tryonScrollCarouselState.controlsBound) return
-        const openBtn = document.getElementById('tryonScrollViewAll')
+        const openBtns = document.querySelectorAll('[data-tryon-scroll-view-all]')
         const closeBtn = document.getElementById('tryonGalleryModalClose')
         const overlay = document.getElementById('tryonGalleryModalOverlay')
-        if (openBtn) {
+        openBtns.forEach((openBtn) => {
+          if (!openBtn) return
           openBtn.addEventListener('click', openTryonScrollModal)
-        }
+        })
         if (closeBtn) {
           closeBtn.addEventListener('click', () => closeTryonScrollModal())
         }
