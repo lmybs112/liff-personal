@@ -527,6 +527,67 @@
         display: none;
       }
 
+      @media screen and (max-width: 640px) {
+        .tryon-side-panel-dock--banner {
+          padding: 8px 10px;
+          gap: 8px;
+        }
+
+        .tryon-side-panel-dock--banner .tryon-carousel {
+          flex: 0 0 48px;
+          width: 48px;
+        }
+
+        .tryon-side-panel-dock--banner .tryon-carousel__viewport {
+          width: 48px;
+          height: 48px;
+        }
+
+        .tryon-side-panel-dock--banner .tryon-qr {
+          padding: 6px 8px;
+          gap: 4px;
+        }
+
+        .tryon-side-panel-dock--banner .tryon-qr__name {
+          font-size: 12px;
+          line-height: 16px;
+        }
+
+        .tryon-side-panel-dock--banner .tryon-scroll-gallery__cta {
+          width: auto;
+          max-width: 100%;
+          align-self: flex-start;
+          font-size: 11px;
+          padding: 6px 32px 6px 10px;
+          box-shadow: 0 8px 18px rgba(0, 0, 0, 0.28);
+        }
+
+        .tryon-side-panel-dock--banner .tryon-scroll-gallery__cta::after {
+          width: 24px;
+          height: 24px;
+          font-size: 13px;
+          right: 6px;
+        }
+
+        .tryon-side-panel-dock--banner .tryon-scroll-gallery__cta-label {
+          font-size: inherit;
+          line-height: 1.25;
+          white-space: nowrap;
+          overflow: hidden;
+          text-overflow: ellipsis;
+          max-width: 100%;
+        }
+
+        .tryon-side-panel-dock--banner .tryon-side-panel-dock__expand-affordance {
+          min-width: 44px;
+          padding: 2px 0;
+        }
+
+        .tryon-side-panel-dock--banner .tryon-side-panel-dock__expand-label {
+          font-size: 10px;
+        }
+      }
+
       @media (prefers-reduced-motion: reduce) {
         .tryon-side-panel-dock.tryon-side-panel-dock--banner {
           transition: none;
