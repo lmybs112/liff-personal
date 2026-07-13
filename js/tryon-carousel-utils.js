@@ -59,6 +59,19 @@
   }
 
   /**
+   * 只保留問號前的網址（API Link / url 不帶 query string）
+   * @param {string} value
+   * @returns {string}
+   */
+  function stripUrlQuery(value) {
+    if (typeof value !== 'string') return ''
+    const trimmed = value.trim()
+    if (!trimmed) return ''
+    const queryIndex = trimmed.indexOf('?')
+    return queryIndex === -1 ? trimmed : trimmed.slice(0, queryIndex)
+  }
+
+  /**
    * 產生 Copilot API 所需的 request payload
    * @param {string} brand
    * @param {string} Link
@@ -68,7 +81,7 @@
    * @returns {{Brand: string, Link: string, TID: string, subctype: string, num: number}}
    */
   function createCopilotPayload(brand, Link, TID, subctype, num) {
-    const normalizedLink = (Link || '').trim()
+    const normalizedLink = stripUrlQuery(Link || '')
     const payload = { Brand: (brand || '').trim().toUpperCase() }
     if (normalizedLink) {
       payload.Link = normalizedLink
@@ -157,6 +170,7 @@
   return {
     transformCopilotPayload,
     createCopilotPayload,
+    stripUrlQuery,
     buildQrImageUrl,
     extractSku,
     shouldHighlightTryonScrollCta,

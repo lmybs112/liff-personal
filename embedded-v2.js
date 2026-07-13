@@ -241,18 +241,27 @@
       }
 
       function callModelAPI(urlVal) {
+        const strippedUrl =
+          typeof window.inffitsStripUrlQuery === 'function'
+            ? window.inffitsStripUrlQuery(urlVal)
+            : typeof TryonCarouselUtils !== 'undefined' && typeof TryonCarouselUtils.stripUrlQuery === 'function'
+              ? TryonCarouselUtils.stripUrlQuery(urlVal)
+              : String(urlVal || '').split('?')[0]
+        const requestData = {
+          Brand: Brand,
+          url: strippedUrl,
+          CONFIG: 'on'
+        }
+        if (String(Brand || '').toUpperCase() !== 'AURASTRO') {
+          requestData['91APP'] = 'on'
+        }
         const fetchPromise =
           typeof window.inffitsFetchModelData === 'function'
-            ? window.inffitsFetchModelData(Brand, urlVal)
+            ? window.inffitsFetchModelData(Brand, strippedUrl)
             : fetch(dataUrl, {
                 method: 'POST',
                 headers: { accept: 'application/json', 'content-type': 'application/json' },
-                body: JSON.stringify({
-                  Brand: Brand,
-                  url: urlVal,
-                  CONFIG: 'on',
-                  '91APP': 'on'
-                })
+                body: JSON.stringify(requestData)
               }).then((res) => res.json())
 
         return fetchPromise

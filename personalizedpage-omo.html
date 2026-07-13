@@ -18,12 +18,26 @@
     />
     <!-- LIFF SDK -->
     <script charset="utf-8" src="https://static.line-scdn.net/liff/edge/2/sdk.js"></script>
+    <!-- Google Analytics 4 (GA4) — infFITS 個人化推薦行為追蹤 -->
     <script>
       ;(function () {
         try {
+          var DEFAULT_GA4_ID = ''
+          // 預設 GA4 評估 ID：僅當 URL search 含 MDMR 時啟用（可用 ?ga4key= 額外串接品牌自有的 GA4）
+          if (window.location.search.includes('MDMR')) {
+            DEFAULT_GA4_ID = 'G-H9V8PTN2X4'
+          }
           var params = new URLSearchParams(window.location.search)
-          var ga4key = (params.get('ga4key') || '').trim()
-          if (!ga4key) return
+          var extraKey = (params.get('ga4key') || '').trim()
+
+          // 去重後要載入 / 設定的 GA4 ID 清單（略過空字串）
+          // 有 ga4key 時只用 ga4key；沒有 ga4key 且 URL 含 MDMR 時才用預設 ID
+          var ids = []
+          if (extraKey) {
+            ids.push(extraKey)
+          } else if (DEFAULT_GA4_ID) {
+            ids.push(DEFAULT_GA4_ID)
+          }
 
           window.dataLayer = window.dataLayer || []
           window.gtag =
@@ -32,14 +46,66 @@
               window.dataLayer.push(arguments)
             }
 
-          window.gtag('js', new Date())
-          window.gtag('config', ga4key)
+          // 實際使用的評估 ID：優先 ga4key，否則才是 MDMR 預設
+          window.INF_GA4_ID = extraKey || DEFAULT_GA4_ID
+          window.INF_GA4_IDS = ids
 
-          var script = document.createElement('script')
-          script.async = true
-          script.src = 'https://www.googletagmanager.com/gtag/js?id=' + encodeURIComponent(ga4key)
+          // ── 發送事件輔助函式：infTrack(eventName, params) ───────────────
+          // 每個事件都會自動附帶頁面情境維度（品牌、推薦類型、是否帶 AI 標籤、
+          // 進站來源等），方便在 GA4 報表中分眾、證明服務成效。
+          function _ctx() {
+            try {
+              var p = new URLSearchParams(window.location.search)
+              var brand = (p.get('brand') || '').trim()
+              var randomGen = brand ? 'false' : 'true'
+              if (!brand) brand = 'JERSCY'
+              var tags = []
+              try {
+                tags = JSON.parse(sessionStorage.getItem('inf-ai-tags') || '[]')
+              } catch (e) {}
+              return {
+                inf_brand: brand,
+                inf_page_type: p.get('type') || 'pd',
+                inf_random_gen: randomGen,
+                inf_has_ai_tags: tags && tags.length ? 'true' : 'false',
+                inf_ai_tag_count: tags && tags.length ? tags.length : 0,
+                inf_tryon_param: p.get('tryon') || 'false',
+                inf_entry: p.get('utm_source') || p.get('liffId') ? 'liff' : 'web'
+              }
+            } catch (e) {
+              return {}
+            }
+          }
+
+          window.infTrack = function (eventName, eventParams) {
+            try {
+              if (typeof window.gtag !== 'function' || !eventName) return
+              var merged = _ctx()
+              if (eventParams) {
+                for (var k in eventParams) {
+                  if (Object.prototype.hasOwnProperty.call(eventParams, k)) merged[k] = eventParams[k]
+                }
+              }
+              window.gtag('event', eventName, merged)
+            } catch (e) {}
+          }
+
+          // 沒有任何評估 ID（無 MDMR 且無 ga4key）則不載入 gtag.js
+          if (!ids.length) return
+
+          window.gtag('js', new Date())
+          ids.forEach(function (id) {
+            // 保留標準 page_view（GA4 內建報表用），另以 personalized_page_view
+            // 補上品牌 / 推薦類型 / AI 標籤等自訂情境維度
+            window.gtag('config', id)
+          })
+
+          // 載入 gtag.js（以清單第一個有效 ID 載入；config 會把事件送到所有已設定的 ID）
+          var loader = document.createElement('script')
+          loader.async = true
+          loader.src = 'https://www.googletagmanager.com/gtag/js?id=' + encodeURIComponent(ids[0])
           var firstScript = document.getElementsByTagName('script')[0]
-          firstScript.parentNode.insertBefore(script, firstScript)
+          firstScript.parentNode.insertBefore(loader, firstScript)
         } catch (e) {}
       })()
     </script>
@@ -3928,9 +3994,18 @@
         }
       })();
 
+      // 只保留問號前的網址（API Link / url 不帶 query string）
+      window.inffitsStripUrlQuery = window.inffitsStripUrlQuery || function (value) {
+        if (typeof value !== 'string') return ''
+        const trimmed = value.trim()
+        if (!trimmed) return ''
+        const queryIndex = trimmed.indexOf('?')
+        return queryIndex === -1 ? trimmed : trimmed.slice(0, queryIndex)
+      }
+
       // Link 有值只送 Brand + Link；Link 為空才送 TID / subctype / num
       window.inffitsBuildCopilotPayload = window.inffitsBuildCopilotPayload || function (brand, linkVal) {
-        const normalizedLink = (linkVal || '').trim()
+        const normalizedLink = window.inffitsStripUrlQuery(linkVal || '')
         const payload = { Brand: (brand || '').toUpperCase() }
         if (normalizedLink) {
           payload.Link = normalizedLink
@@ -3945,7 +4020,8 @@
 
       // 全域 Copilot 狀態快取機制，避免多個元件重複呼叫 API
       window.inffitsFetchCopilotStatus = window.inffitsFetchCopilotStatus || function(brand, linkVal) {
-        const cacheKey = `${(brand || '').toUpperCase()}_${linkVal || ''}`;
+        const strippedLink = window.inffitsStripUrlQuery(linkVal || '');
+        const cacheKey = `${(brand || '').toUpperCase()}_${strippedLink}`;
         window._copilotStatusPromises = window._copilotStatusPromises || {};
         if (!window._copilotStatusPromises[cacheKey]) {
           window._copilotStatusPromises[cacheKey] = fetch('https://api.inffits.com/pid_get_copilot_status/model', {
@@ -3954,7 +4030,7 @@
               'accept': 'application/json',
               'Content-Type': 'application/json'
             },
-            body: JSON.stringify(window.inffitsBuildCopilotPayload(brand, linkVal))
+            body: JSON.stringify(window.inffitsBuildCopilotPayload(brand, strippedLink))
           })
           .then(res => {
             if (!res.ok) throw new Error('API 回應異常');
@@ -3970,7 +4046,8 @@
 
       // 全域 httpgpi/model 快取機制，避免多個元件重複呼叫 API
       window.inffitsFetchModelData = window.inffitsFetchModelData || function(brand, urlVal) {
-        const cacheKey = `${(brand || '').toUpperCase()}_${urlVal || ''}`;
+        const strippedUrl = window.inffitsStripUrlQuery(urlVal || '');
+        const cacheKey = `${(brand || '').toUpperCase()}_${strippedUrl}`;
         window._modelDataPromises = window._modelDataPromises || {};
         if (!window._modelDataPromises[cacheKey]) {
           window._modelDataPromises[cacheKey] = fetch('https://api.inffits.com/httpgpi/model', {
@@ -3978,12 +4055,17 @@
             headers: {
               'Content-Type': 'application/json'
             },
-            body: JSON.stringify({
-              Brand: brand,
-              url: urlVal,
-              CONFIG: "on",
-              "91APP": "on"
-            })
+            body: JSON.stringify((function () {
+              const payload = {
+                Brand: brand,
+                url: strippedUrl,
+                CONFIG: "on"
+              };
+              if (String(brand || '').toUpperCase() !== 'AURASTRO') {
+                payload['91APP'] = 'on';
+              }
+              return payload;
+            })())
           })
           .then(res => {
             if (!res.ok) throw new Error('API 回應異常');
@@ -4589,12 +4671,14 @@
 
   let Payload = {
     Brand: Brand,
-    url: urlVal,
-    CONFIG: "on",
+    url: (typeof window.inffitsStripUrlQuery === 'function' ? window.inffitsStripUrlQuery(urlVal) : String(urlVal || '').split('?')[0]),
+    CONFIG: "on"
     // DB: "on"
-    "91APP": "on"
     // hostname: document.location.hostname
   };
+  if (String(Brand || '').toUpperCase() !== 'AURASTRO') {
+    Payload['91APP'] = 'on';
+  }
 
   const fetchPromise = (typeof window.inffitsFetchModelData === 'function')
     ? window.inffitsFetchModelData(Brand, urlVal)
@@ -5481,10 +5565,29 @@
         }
         const resolvedProductHref = buildTryonProductHref(productLink)
         if (productLink) {
+          const tryonLinkLabels = new Map([
+            [linkEl, 'cta'],
+            [qrLinkEl, 'qr'],
+            [nameLinkEl, 'product_name'],
+            [externalLinkEl, 'external']
+          ])
           linkedElements.forEach((element) => {
             element.href = resolvedProductHref
             element.setAttribute('aria-disabled', 'false')
             element.classList.remove('tryon-qr__link--disabled')
+            // GA4：從智慧試衣間前往商品頁（試穿 → 導購的關鍵成效）
+            if (!element.dataset.infTryonTracked) {
+              element.dataset.infTryonTracked = '1'
+              element.addEventListener('click', () => {
+                if (window.infTrack)
+                  window.infTrack('infcdp_tryon_product_click', {
+                    inf_link_type: tryonLinkLabels.get(element) || 'unknown',
+                    inf_item_id: productSku || '',
+                    inf_product_sku: productSku || '',
+                    inf_product_name: productName || ''
+                  })
+              })
+            }
           })
           if (linkEl) {
             linkEl.classList.remove('tryon-qr__cta--disabled')
@@ -5649,12 +5752,15 @@
 
         if (prevBtn) {
           prevBtn.addEventListener('click', () => {
+            // GA4：手動切換試穿商品輪播（瀏覽更多商品細節）
+            if (window.infTrack) window.infTrack('infcdp_tryon_carousel_nav', { inf_direction: 'prev' })
             changeTryonCarouselSlide(-1)
             restartTryonCarouselAutoplay()
           })
         }
         if (nextBtn) {
           nextBtn.addEventListener('click', () => {
+            if (window.infTrack) window.infTrack('infcdp_tryon_carousel_nav', { inf_direction: 'next' })
             changeTryonCarouselSlide(1)
             restartTryonCarouselAutoplay()
           })
@@ -6290,7 +6396,9 @@
        */
       function openFullscreenViewer(images, startIndex = 0) {
         if (!images || !images.length) return
-        
+        // GA4：放大檢視試穿圖片（深度檢視商品的高黏著行為）
+        if (window.infTrack)
+          window.infTrack('infcdp_tryon_image_fullscreen', { inf_image_count: images.length, inf_start_index: startIndex })
         console.log('📸 開啟全螢幕瀏覽器，圖片數量:', images.length, '起始索引:', startIndex)
         
         fullscreenViewerState.images = images
@@ -6595,6 +6703,9 @@
         if (!tryonScrollCarouselState.images.length) return
         const modal = document.getElementById('tryonGalleryModal')
         if (!modal) return
+        // GA4：開啟「查看全部穿搭」靈感彈窗
+        if (window.infTrack)
+          window.infTrack('infcdp_view_tryon_gallery', { inf_image_count: tryonScrollCarouselState.images.length })
         const dialog = modal.querySelector('.tryon-gallery-modal__dialog')
         const animationConfig = getTryonModalAnimationConfig()
         
@@ -6951,6 +7062,9 @@
         }
 
         console.log('✅ Email 驗證通過:', email)
+        // GA4：送出 Email 訂閱（留資漏斗 - 開始）
+        if (window.infTrack)
+          window.infTrack('infcdp_email_lead_submit', { inf_email_domain: (email.split('@')[1] || '').toLowerCase() })
 
         // 初始化按鈕狀態
         mailSectionBtn.classList.remove('sent')
@@ -7047,6 +7161,12 @@
           })
           .then((data) => {
             console.log('✅ Email 發送成功:', data)
+            // GA4：Email 訂閱成功（轉換 - 取得名單 + EDM 帶 N 件商品）
+            if (window.infTrack)
+              window.infTrack('infcdp_email_lead', {
+                inf_email_domain: (email.split('@')[1] || '').toLowerCase(),
+                inf_product_count: jsonData.length
+              })
             mailSectionBtn.classList.add('sent')
             sendElement.style.display = 'none'
             // mailSectionBtn.disabled = false
@@ -7059,6 +7179,9 @@
           })
           .catch((error) => {
             showSendAlert('send-email-error')
+            // GA4：Email 訂閱失敗（用於監控漏斗流失）
+            if (window.infTrack)
+              window.infTrack('infcdp_email_lead_failed', { inf_reason: (error && error.message) || 'unknown' })
             console.error('❌ Email 發送失敗:', error)
             mailSectionBtn.classList.remove('sent')
             // mailSectionBtn.disabled = false
@@ -7499,6 +7622,12 @@
 
           if (successful) {
             isCopied = true
+            // GA4：折扣碼複製（高購買意圖訊號）
+            if (window.infTrack)
+              window.infTrack('infcdp_copy_coupon', {
+                inf_coupon_code: code,
+                inf_device: window.innerWidth <= 768 ? 'mobile' : 'desktop'
+              })
             const isMobile = window.innerWidth <= 768
             if (isMobile) {
               showSendAlert('copy-code-finish')
@@ -7550,6 +7679,8 @@
 
       // Scroll to recommendations section
       function scrollToRecom() {
+        // GA4：點擊英雄區「查看結果」CTA，主動探索推薦
+        if (window.infTrack) window.infTrack('infcdp_view_recommendations', { inf_source: 'hero_cta' })
         const target = document.getElementById('jump-recom')
         if (target) {
           target.scrollIntoView({
@@ -7562,6 +7693,11 @@
       // Go back to previous page
       function goBack(event) {
         if (event) event.preventDefault()
+        // GA4：重新嘗試 / 回到頂部（再行銷與重複使用訊號）
+        if (window.infTrack)
+          window.infTrack('infcdp_restart_recommendation', {
+            inf_mode: randomGen === 'true' || !!Brand ? 'scroll_top' : 'back_to_form'
+          })
         randomGen === 'true' || !!Brand
           ? window.scrollTo({ top: 0, behavior: 'smooth' })
           : window.location.replace('./personalized.html')
@@ -8254,6 +8390,9 @@
         btn.classList.add('liff-promo-btn--loading')
         btn.textContent = '發送中...'
 
+        // GA4：點擊「取得最新優惠資訊」（LINE 推播漏斗 - 開始）
+        if (window.infTrack) window.infTrack('infcdp_liff_promo_click', {})
+
         try {
           console.log('🚀 開始發送優惠訊息...')
           console.log('📍 步驟 1/4：初始化 LIFF...')
@@ -8270,6 +8409,8 @@
             console.log('⚠️ 未登入，開始登入流程...')
             // 設置標記，登入後自動發送
             localStorage.setItem('liff_auto_send_promo', 'true')
+            // GA4：觸發 LINE 登入（漏斗 - 登入步驟）
+            if (window.infTrack) window.infTrack('infcdp_liff_login_start', {})
             btn.textContent = '登入中...'
             liff.login()
             return
@@ -8297,6 +8438,10 @@
           // 清除自動發送標記
           localStorage.removeItem('liff_auto_send_promo')
 
+          // GA4：成功將個人化優惠推播到 LINE（核心轉換 - OMO 回流）
+          if (window.infTrack)
+            window.infTrack('infcdp_liff_promo_sent', { inf_product_count: promoProducts.length })
+
           // 顯示成功訊息
           console.log('🎉 全部完成！')
           alert('✅ 優惠訊息已發送到您的 LINE！')
@@ -8304,7 +8449,10 @@
         } catch (error) {
           console.error('❌ 發送失敗:', error)
           console.error('❌ 錯誤堆疊:', error.stack)
-          
+          // GA4：LINE 推播失敗（監控漏斗流失）
+          if (window.infTrack)
+            window.infTrack('infcdp_liff_promo_failed', { inf_reason: (error && error.message) || 'unknown' })
+
           // 清除自動發送標記
           localStorage.removeItem('liff_auto_send_promo')
           
@@ -8763,6 +8911,162 @@
           }, 1000)
         }
       })
+
+      // ═══════════════════════════════════════════════════════════════
+      // GA4 行為追蹤模組：曝光、捲動深度、商品點擊、互動停留時間
+      // 用 infTrack() 統一送出，所有事件自動帶頁面情境維度
+      // ═══════════════════════════════════════════════════════════════
+      ;(function infBehaviorTracking() {
+        if (window.__infBehaviorTrackingInit) return
+        window.__infBehaviorTrackingInit = true
+
+        var track = function (name, params) {
+          if (window.infTrack) window.infTrack(name, params || {})
+        }
+
+        // 從商品連結 URL 萃取商品 ID（推薦卡片 DOM 上沒有獨立 id 屬性，
+        // 商品 ID 通常藏在 URL 的 query 參數或路徑末段）
+        var deriveProductId = function (link) {
+          if (!link || link === '#') return ''
+          try {
+            var u = new URL(link, window.location.origin)
+            var keys = ['id', 'pid', 'product_id', 'productId', 'sku', 'goods_id', 'spu', 'itemid', 'item_id', 'variant']
+            for (var i = 0; i < keys.length; i++) {
+              var v = u.searchParams.get(keys[i])
+              if (v) return v
+            }
+            var parts = u.pathname.split('/').filter(Boolean)
+            if (parts.length) return decodeURIComponent(parts[parts.length - 1])
+            return link
+          } catch (e) {
+            return link
+          }
+        }
+
+        document.addEventListener('DOMContentLoaded', function () {
+          var startTime = Date.now()
+          var maxScroll = 0
+          var firedScrollMarks = {}
+          var firedSectionViews = {}
+          var firedItemLists = {}
+          var engagementSent = false
+
+          // ── 1. 進站：個人化頁面瀏覽（含 AI 標籤情境）────────────────
+          track('infcdp_personalized_page_view', {
+            inf_viewport: window.innerWidth <= 768 ? 'mobile' : 'desktop'
+          })
+
+          // ── 2. 區塊曝光：哪些功能真的被看到 ───────────────────────
+          var sectionMap = [
+            { sel: '.cta-section, .mobile-cta-section', name: 'coupon' },
+            { sel: '.tryon_section', name: 'tryon' },
+            { sel: '.personalized_hero_section', name: 'hero' },
+            { sel: '#jump-recom', name: 'personalized_recommendations' },
+            { sel: '#jump-more', name: 'more_recommendations' },
+            { sel: '.mail-section', name: 'mail_subscribe' },
+            { sel: '#restartContainer', name: 'restart' }
+          ]
+          if ('IntersectionObserver' in window) {
+            var sectionObserver = new IntersectionObserver(
+              function (entries) {
+                entries.forEach(function (entry) {
+                  if (!entry.isIntersecting) return
+                  var name = entry.target.getAttribute('data-inf-section')
+                  if (!name || firedSectionViews[name]) return
+                  firedSectionViews[name] = true
+                  track('infcdp_view_section', { inf_section_name: name })
+                  sectionObserver.unobserve(entry.target)
+                })
+              },
+              { threshold: 0.4 }
+            )
+            sectionMap.forEach(function (s) {
+              var el = document.querySelector(s.sel)
+              if (el) {
+                el.setAttribute('data-inf-section', s.name)
+                sectionObserver.observe(el)
+              }
+            })
+          }
+
+          // ── 3. 商品清單曝光 + 商品卡片點擊（事件委派，支援動態注入）──
+          var listContainers = [
+            { id: 'personalized-recommendations', list: 'personalized_recommendations' },
+            { id: 'more-recommendations', list: 'more_recommendations' }
+          ]
+          listContainers.forEach(function (cfg) {
+            var container = document.getElementById(cfg.id)
+            if (!container) return
+
+            // 3a. 點擊商品卡片 → select_item
+            container.addEventListener('click', function (e) {
+              var card = e.target.closest('.embeddedItem')
+              if (!card || !container.contains(card)) return
+              var items = Array.prototype.slice.call(
+                container.querySelectorAll('.embeddedItem')
+              )
+              var cardLink = card.getAttribute('data-link') || card.getAttribute('href') || ''
+              track('infcdp_select_item', {
+                inf_item_list_name: cfg.list,
+                inf_item_id: deriveProductId(cardLink),
+                inf_item_name: card.getAttribute('data-title') || '',
+                inf_item_index: items.indexOf(card) + 1
+              })
+            })
+
+            // 3b. 商品首次注入完成 → view_item_list
+            if ('MutationObserver' in window) {
+              var mo = new MutationObserver(function () {
+                var count = container.querySelectorAll('.embeddedItem').length
+                if (count > 0 && !firedItemLists[cfg.id]) {
+                  firedItemLists[cfg.id] = true
+                  track('infcdp_view_item_list', { inf_item_list_name: cfg.list, inf_item_count: count })
+                  mo.disconnect()
+                }
+              })
+              mo.observe(container, { childList: true, subtree: true })
+            }
+          })
+
+          // ── 4. 試衣間收合切換（委派，按鈕為動態注入）──────────────
+          document.addEventListener('click', function (e) {
+            var toggle = e.target.closest && e.target.closest('#tryonCollapseToggleBtn')
+            if (toggle) track('infcdp_tryon_collapse_toggle', {})
+          })
+
+          // ── 5. 捲動深度：使用者讀到頁面多深 ───────────────────────
+          var onScroll = function () {
+            var doc = document.documentElement
+            var scrollTop = window.pageYOffset || doc.scrollTop || 0
+            var scrollable = (doc.scrollHeight || 0) - window.innerHeight
+            if (scrollable <= 0) return
+            var pct = Math.min(100, Math.round((scrollTop / scrollable) * 100))
+            if (pct > maxScroll) maxScroll = pct
+            ;[25, 50, 75, 90].forEach(function (mark) {
+              if (pct >= mark && !firedScrollMarks[mark]) {
+                firedScrollMarks[mark] = true
+                track('infcdp_scroll_depth', { inf_percent: mark })
+              }
+            })
+          }
+          window.addEventListener('scroll', onScroll, { passive: true })
+
+          // ── 6. 互動停留時間：證明使用者深度參與 ───────────────────
+          var sendEngagement = function () {
+            if (engagementSent) return
+            engagementSent = true
+            track('infcdp_page_engagement', {
+              inf_engagement_seconds: Math.round((Date.now() - startTime) / 1000),
+              inf_max_scroll_percent: maxScroll
+            })
+          }
+          document.addEventListener('visibilitychange', function () {
+            if (document.visibilityState === 'hidden') sendEngagement()
+          })
+          window.addEventListener('pagehide', sendEngagement)
+        })
+      })()
+
     </script>
   </body>
 </html>
