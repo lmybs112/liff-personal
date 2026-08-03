@@ -4089,6 +4089,33 @@
       const link = FIXED_MODEMARIE_PRODUCT_URL
       const tryOn = params.get('tryon') || 'false'
       const type = params.get('type') || 'pd'
+
+      // 寫死：所有商品卡／試衣 CTA 一律開 keepbodyinfo（含 embedded.js 動態注入）
+      const PRODUCT_LINK_SELECTOR =
+        'a.embeddedItem, #tryonProductLink, #tryonQrLink, #tryonProductExternalLink, a#tryonProductName'
+      function forceKeepbodyinfoLinks(root) {
+        ;(root || document).querySelectorAll(PRODUCT_LINK_SELECTOR).forEach(function (a) {
+          a.setAttribute('href', KEEPBODYINFO_URL)
+          a.setAttribute('data-link', KEEPBODYINFO_URL)
+        })
+      }
+      document.addEventListener(
+        'click',
+        function (e) {
+          var a = e.target && e.target.closest && e.target.closest(PRODUCT_LINK_SELECTOR)
+          if (!a) return
+          e.preventDefault()
+          e.stopPropagation()
+          window.open(KEEPBODYINFO_URL, '_blank', 'noopener,noreferrer')
+        },
+        true
+      )
+      if (typeof MutationObserver !== 'undefined') {
+        new MutationObserver(function () {
+          forceKeepbodyinfoLinks()
+        }).observe(document.documentElement, { childList: true, subtree: true })
+      }
+      forceKeepbodyinfoLinks()
       const TRYON_COPILOT_ENDPOINT = 'https://api.inffits.com/pid_get_copilot_status/model'
       // iframe 內 HTTP_infFITS_Brand_json_call/model 較慢，需等 load 後再給足夠時間等 IDRxReady
       const TRYON_IFRAME_READY_TIMEOUT_MS = 15000
@@ -4138,7 +4165,7 @@
           price: '990',
           prectype: 'tee',
           size_tag: 'M',
-          link: 'https://www.jerscy.com.tw/products/66f29881e6d86a00019e27a0?letiation=66f2988783324a0001816667',
+          link: 'https://infshop.shoplineapp.com/products/keepbodyinfo',
           pid: '66f29881e6d86a00019e27a0',
           id: '66f29881e6d86a00019e27a0',
           availability: 'out of stock',
@@ -4153,7 +4180,7 @@
           price: '1,290',
           prectype: 'pants',
           size_tag: 'M',
-          link: 'https://www.jerscy.com.tw/products/670929aefe05db00018abeaa?letiation=670929b0372c34000163626f',
+          link: 'https://infshop.shoplineapp.com/products/keepbodyinfo',
           pid: '670929aefe05db00018abeaa',
           id: '670929aefe05db00018abeaa',
           availability: 'in stock',
@@ -4168,7 +4195,7 @@
           price: '690',
           prectype: 'tee',
           size_tag: 'M',
-          link: 'https://www.jerscy.com.tw/products/6540b11af914420001e6dd6a?letiation=6540b11ba857420001604f8b',
+          link: 'https://infshop.shoplineapp.com/products/keepbodyinfo',
           pid: '6540b11af914420001e6dd6a',
           id: '6540b11af914420001e6dd6a',
           availability: 'out of stock',
@@ -4182,7 +4209,7 @@
             'https://img.shoplineapp.com/media/image_clips/645244be096aa6001719a446/original.jpg?1683113150',
           fb_product_category: 'clothing & accessories > clothing',
           gender: 'male',
-          link: 'https://www.jerscy.com.tw/products/64523497ad97a416e7d6eeb0?letiation=645234966c09a3001b15657a',
+          link: 'https://infshop.shoplineapp.com/products/keepbodyinfo',
           description:
             '終極重磅TEE系列。11.4oz全新厚度，全新磅數，感受更硬挺的紮實厚度。採用空氣渦流紡，結合超緊密織法，滑順且極低毛羽布料，告別夏日穿著素T粘膩感。不僅如此，布料更耐水洗且不易起毬。精挑細選色彩，讓你看到的每一色都好搭配。',
           pid: '64523497ad97a416e7d6eeb0',
@@ -4205,7 +4232,7 @@
             'https://img.shoplineapp.com/media/image_clips/64d3683173f9c70016f69439/original.jpg?1691576368',
           fb_product_category: 'clothing & accessories > clothing',
           gender: 'male',
-          link: 'https://www.jerscy.com.tw/products/5e6f5bdeecd74c0557568d7f?letiation=643615b8a9c67a02a7a6ef7e',
+          link: 'https://infshop.shoplineapp.com/products/keepbodyinfo',
           description:
             '業界唯一導入NASA太空等級Ionic+® 銀離子抗菌除臭科技，解決夏日流汗導致汗臭問題。採用10.9oz布料為基底，超級重磅口袋TEE全新設計，經典重現，簡約時尚隨性百搭，獨家開發重磅布料，挑戰市場最具份量最耐洗的重磅口袋素T，解決男生穿著素T激凸和超耐洗的最佳解決方案！美國棉Cotton USA認證，全程台灣製，精緻細工質感細節，網友評比CP值最高重磅素T。提醒一下，怕重不要穿！',
           pid: '5e6f5bdeecd74c0557568d7f',
@@ -4229,7 +4256,7 @@
           price: '590',
           prectype: 'tee',
           size_tag: 'M',
-          link: 'https://www.jerscy.com.tw/products/66383cc18826fb00014a2104?letiation=66383cc208fcd800019a4ece',
+          link: 'https://infshop.shoplineapp.com/products/keepbodyinfo',
           pid: '66383cc18826fb00014a2104',
           id: '66383cc18826fb00014a2104',
           availability: 'in stock',
