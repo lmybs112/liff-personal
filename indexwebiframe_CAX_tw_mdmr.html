@@ -1016,7 +1016,9 @@
         })();
     </script>
     <script>
-        // BroadcastChannel：同 origin iframe（試衣頁 ↔ keepbodyinfo）同步身材資料，避免重複輸入
+        // BroadcastChannel + hash/postMessage：同步身材資料
+        // 注意：試衣頁（第一方）↔ keepbodyinfo（第三方 iframe）storage 會被隔離，
+        // 需靠 URL hash / parent postMessage / opener 傳資料，不能只靠 BC。
         (function () {
             var CHANNEL = 'inffits-sizeai-body-sync';
             var KEYS = [
@@ -1025,23 +1027,9 @@
                 'BodyID0', 'BodyID1', 'BodyID2', 'BodyID3', 'BodyID4', 'BodyID5',
                 'CLOTHLIST', 'tb_cloth'
             ];
-            if (typeof BroadcastChannel === 'undefined') return;
-            var bc;
-            try { bc = new BroadcastChannel(CHANNEL); } catch (e) { return; }
             var applying = false;
             var publishTimer = null;
-
-            function snapshot() {
-                var data = {};
-                for (var i = 0; i < KEYS.length; i++) {
-                    var k = KEYS[i];
-                    try {
-                        var v = localStorage.getItem(k);
-                        if (v != null) data[k] = v;
-                    } catch (e) {}
-                }
-                return data;
-            }
+            var bc = null;
 
             function apply(data) {
                 if (!data || typeof data !== 'object') return;
@@ -1056,8 +1044,63 @@
                 }
             }
 
+            function decodeBodyPayload(raw) {
+                if (!raw) return null;
+                try {
+                    var s = String(raw).replace(/-/g, '+').replace(/_/g, '/');
+                    while (s.length % 4) s += '=';
+                    return JSON.parse(decodeURIComponent(escape(atob(s))));
+                } catch (e1) {
+                    try {
+                        return JSON.parse(decodeURIComponent(String(raw)));
+                    } catch (e2) {
+                        return null;
+                    }
+                }
+            }
+
+            function applyFromLocationHash() {
+                try {
+                    var hash = location.hash || '';
+                    var m = hash.match(/inffits_body=([^&]*)/);
+                    if (!m) return;
+                    var data = decodeBodyPayload(decodeURIComponent(m[1]));
+                    if (data) apply(data);
+                } catch (e) {}
+            }
+
+            applyFromLocationHash();
+
+            window.addEventListener('message', function (e) {
+                var d = e && e.data;
+                if (!d) return;
+                if (d.MsgHeader === 'inffits-body-apply' && d.data) {
+                    apply(d.data);
+                    return;
+                }
+                var header = d.MsgHeader || d.header;
+                if (header === 'SizeAI_Fast' || header === 'FML_Done' || header === 'bid' || header === 'IDRxGet') {
+                    if (typeof schedulePublish === 'function') schedulePublish(header);
+                }
+            });
+
+            if (typeof BroadcastChannel === 'undefined') return;
+            try { bc = new BroadcastChannel(CHANNEL); } catch (e) { return; }
+
+            function snapshot() {
+                var data = {};
+                for (var i = 0; i < KEYS.length; i++) {
+                    var k = KEYS[i];
+                    try {
+                        var v = localStorage.getItem(k);
+                        if (v != null) data[k] = v;
+                    } catch (e) {}
+                }
+                return data;
+            }
+
             function publish(reason) {
-                if (applying) return;
+                if (applying || !bc) return;
                 var data = snapshot();
                 if (!data.BodyID && !data.BodyID_size && !data.BodyID_color) return;
                 try {
@@ -1090,15 +1133,6 @@
                     if (this === localStorage && KEYS.indexOf(String(k)) !== -1) schedulePublish('setItem:' + k);
                 };
             } catch (e) {}
-
-            window.addEventListener('message', function (e) {
-                var d = e && e.data;
-                if (!d) return;
-                var header = d.MsgHeader || d.header;
-                if (header === 'SizeAI_Fast' || header === 'FML_Done' || header === 'bid' || header === 'IDRxGet') {
-                    schedulePublish(header);
-                }
-            });
         })();
     </script>
 
