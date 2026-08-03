@@ -8389,6 +8389,83 @@
         }, 200)
       })
 
+      // ===== BroadcastChannel：跨分頁同步身體測量資訊（bid），確保各分頁取得相同推薦結果 =====
+      const bidSyncChannel =
+        typeof BroadcastChannel !== 'undefined' ? new BroadcastChannel('inffits-bid-sync') : null
+      let lastAppliedBidJSON = ''
+
+      // 套用 bid（身體測量資訊）並更新推薦；fromBroadcast 表示 bid 來自其他分頁
+      function applyBidUpdate(bid, fromBroadcast) {
+        const bidJSON = JSON.stringify(bid)
+        // 來自其他分頁的重複 bid 不重複套用，避免推薦區塊反覆重載
+        if (fromBroadcast && bidJSON === lastAppliedBidJSON) return
+        lastAppliedBidJSON = bidJSON
+
+        console.log('收到新的 bid 資料:', bid, fromBroadcast ? '(來自其他分頁)' : '')
+        bid.Brand = Brand
+        window.__lastSyncedBid = bid
+        // 確保 fakeData 有正確的資料結構
+        if (!fakeData.personalized_recommendation) {
+          // console.warn('fakeData.personalized_recommendation 不存在，使用預設值')
+          fakeData.personalized_recommendation = { ctype_val: '' }
+        }
+        if (!fakeData.more_recommendation) {
+          // console.warn('fakeData.more_recommendation 不存在，使用預設值') 
+          fakeData.more_recommendation = { ctype_val: '' }
+        }
+
+        // 更新現有推薦元件的 bid 參數（僅舊版推薦區塊需要）
+        const brandUpper = (Brand || '').toUpperCase()
+        if (brandUpper !== 'ANNS') {
+          updateProductRecommendationBid('personalized-recommendations', bid)
+          updateProductRecommendationBid('more-recommendations', bid)
+        }
+
+        // 記錄 bid 到達時間，供捲動邏輯計算最小等待時間
+        window.__annsBidReceivedAt = Date.now()
+
+        // 每次收到新 bid 時，先把狀態列文案重置回 loading 狀態，避免舊文案殘留
+        const sizeStatus = document.getElementById('tryonSizeStatus')
+        const sizeSpinner = document.getElementById('tryonSizeSpinner')
+        if (sizeStatus) {
+          const statusTitleEl = sizeStatus.querySelector('.tryon-status__title')
+          const statusSubtitleEl = sizeStatus.querySelector('.tryon-status__subtitle')
+          if (statusTitleEl) {
+            statusTitleEl.textContent = 'infFITS 已經在為您確認尺寸與庫存'
+          }
+          if (statusSubtitleEl) {
+            statusSubtitleEl.textContent = '請稍候，為你更新個人化推薦'
+            statusSubtitleEl.classList.remove('tryon-status__subtitle--cta')
+            statusSubtitleEl.removeAttribute('data-reinput-bound')
+          }
+          if (sizeSpinner) {
+            sizeSpinner.style.display = ''
+          }
+          setTimeout(() => {
+            sizeStatus.style.display = 'flex'
+            sizeStatus.style.animation = 'tryon-status-fadein-up 0.4s ease-out forwards'
+          }, 800)
+        }
+        // 先顯示推薦區塊：分類輪播先出現，overlay 會在各分類第二階段完成後再移除
+        const pidRecomRoot = document.getElementById('pid-recom-sections-root')
+        if (pidRecomRoot) {
+          pidRecomRoot.style.display = 'block'
+        }
+
+        if (Brand.toUpperCase() === 'ANNS') {
+          // 對於 ANNS，重新發送兩階段請求以更新 bid 相關推薦
+          fetchTwoStageRecommendations(bid);
+        }
+
+        // 延遲更新 mail-section 圖片，確保兩個推薦區塊都載入完成
+        // setTimeout(() => {
+        //   if (typeof updateMailSectionImages === 'function') {
+        //     console.log('🖼️ bid 更新完成，正在更新 mail-section 圖片...')
+        //     updateMailSectionImages()
+        //   }
+        // }, 4000) // 等待 4 秒讓兩個推薦區塊都完全載入
+      }
+
       // 新增接收 #inffits_ctryon_window iframe message
       window.addEventListener('message', function (event) {
         // 只接收來自 #inffits_ctryon_window 的訊息
@@ -8396,72 +8473,29 @@
           if (tryonIframe && event.source === tryonIframe.contentWindow) {
           // console.log('[iframe message]', event.data)
           if (event.data.header === 'bid') {
-            const bid = event.data.value
-            console.log('收到新的 bid 資料:', bid)
-            bid.Brand = Brand
-            // 確保 fakeData 有正確的資料結構
-            if (!fakeData.personalized_recommendation) {
-              // console.warn('fakeData.personalized_recommendation 不存在，使用預設值')
-              fakeData.personalized_recommendation = { ctype_val: '' }
+            applyBidUpdate(event.data.value, false)
+            // 廣播給其他分頁，讓同品牌頁面同步載入相同的身體測量資訊
+            if (bidSyncChannel) {
+              bidSyncChannel.postMessage({ type: 'bid', brand: Brand, bid: window.__lastSyncedBid })
             }
-            if (!fakeData.more_recommendation) {
-              // console.warn('fakeData.more_recommendation 不存在，使用預設值') 
-              fakeData.more_recommendation = { ctype_val: '' }
-            }
-            
-            // 更新現有推薦元件的 bid 參數（僅舊版推薦區塊需要）
-            const brandUpper = (Brand || '').toUpperCase()
-            if (brandUpper !== 'ANNS') {
-              updateProductRecommendationBid('personalized-recommendations', bid)
-              updateProductRecommendationBid('more-recommendations', bid)
-            }
-            
-            // 記錄 bid 到達時間，供捲動邏輯計算最小等待時間
-            window.__annsBidReceivedAt = Date.now()
-
-            // 每次收到新 bid 時，先把狀態列文案重置回 loading 狀態，避免舊文案殘留
-            const sizeStatus = document.getElementById('tryonSizeStatus')
-            const sizeSpinner = document.getElementById('tryonSizeSpinner')
-            if (sizeStatus) {
-              const statusTitleEl = sizeStatus.querySelector('.tryon-status__title')
-              const statusSubtitleEl = sizeStatus.querySelector('.tryon-status__subtitle')
-              if (statusTitleEl) {
-                statusTitleEl.textContent = 'infFITS 已經在為您確認尺寸與庫存'
-              }
-              if (statusSubtitleEl) {
-                statusSubtitleEl.textContent = '請稍候，為你更新個人化推薦'
-                statusSubtitleEl.classList.remove('tryon-status__subtitle--cta')
-                statusSubtitleEl.removeAttribute('data-reinput-bound')
-              }
-              if (sizeSpinner) {
-                sizeSpinner.style.display = ''
-              }
-              setTimeout(() => {
-                sizeStatus.style.display = 'flex'
-                sizeStatus.style.animation = 'tryon-status-fadein-up 0.4s ease-out forwards'
-              }, 800)
-            }
-            // 先顯示推薦區塊：分類輪播先出現，overlay 會在各分類第二階段完成後再移除
-            const pidRecomRoot = document.getElementById('pid-recom-sections-root')
-            if (pidRecomRoot) {
-              pidRecomRoot.style.display = 'block'
-            }
-
-            if (Brand.toUpperCase() === 'ANNS') {
-              // 對於 ANNS，重新發送兩階段請求以更新 bid 相關推薦
-              fetchTwoStageRecommendations(bid);
-            }
-            
-            // 延遲更新 mail-section 圖片，確保兩個推薦區塊都載入完成
-            // setTimeout(() => {
-            //   if (typeof updateMailSectionImages === 'function') {
-            //     console.log('🖼️ bid 更新完成，正在更新 mail-section 圖片...')
-            //     updateMailSectionImages()
-            //   }
-            // }, 4000) // 等待 4 秒讓兩個推薦區塊都完全載入
           }
         }
       })
+
+      if (bidSyncChannel) {
+        bidSyncChannel.onmessage = function (event) {
+          const data = event.data || {}
+          if (data.brand !== Brand) return
+          if (data.type === 'bid' && data.bid) {
+            applyBidUpdate(data.bid, true)
+          } else if (data.type === 'request-bid' && window.__lastSyncedBid) {
+            // 回應新開分頁的同步請求，補發最後一次的身體測量資訊
+            bidSyncChannel.postMessage({ type: 'bid', brand: Brand, bid: window.__lastSyncedBid })
+          }
+        }
+        // 頁面載入時向其他分頁請求既有的身體測量資訊
+        bidSyncChannel.postMessage({ type: 'request-bid', brand: Brand })
+      }
 
       function renderPidRecommendationSections(groupsByType, currentBid) {
         const root = document.getElementById('pid-recom-sections-root')

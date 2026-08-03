@@ -7802,6 +7802,44 @@
         }, 200)
       })
 
+      // ===== BroadcastChannel：跨分頁同步身體測量資訊（bid），確保各分頁取得相同推薦結果 =====
+      const bidSyncChannel =
+        typeof BroadcastChannel !== 'undefined' ? new BroadcastChannel('inffits-bid-sync') : null
+      let lastAppliedBidJSON = ''
+
+      // 套用 bid（身體測量資訊）並更新推薦；fromBroadcast 表示 bid 來自其他分頁
+      function applyBidUpdate(bid, fromBroadcast) {
+        const bidJSON = JSON.stringify(bid)
+        // 來自其他分頁的重複 bid 不重複套用，避免推薦區塊反覆重載
+        if (fromBroadcast && bidJSON === lastAppliedBidJSON) return
+        lastAppliedBidJSON = bidJSON
+
+        // console.log('收到新的 bid 資料:', bid, fromBroadcast ? '(來自其他分頁)' : '')
+        bid.Brand = Brand
+        window.__lastSyncedBid = bid
+        // 確保 fakeData 有正確的資料結構
+        if (!fakeData.personalized_recommendation) {
+          // console.warn('fakeData.personalized_recommendation 不存在，使用預設值')
+          fakeData.personalized_recommendation = { ctype_val: '' }
+        }
+        if (!fakeData.more_recommendation) {
+          // console.warn('fakeData.more_recommendation 不存在，使用預設值') 
+          fakeData.more_recommendation = { ctype_val: '' }
+        }
+
+        // 更新現有推薦元件的 bid 參數
+        updateProductRecommendationBid('personalized-recommendations', bid)
+        updateProductRecommendationBid('more-recommendations', bid)
+
+        // 延遲更新 mail-section 圖片，確保兩個推薦區塊都載入完成
+        // setTimeout(() => {
+        //   if (typeof updateMailSectionImages === 'function') {
+        //     console.log('🖼️ bid 更新完成，正在更新 mail-section 圖片...')
+        //     updateMailSectionImages()
+        //   }
+        // }, 4000) // 等待 4 秒讓兩個推薦區塊都完全載入
+      }
+
       // 新增接收 #inffits_ctryon_window iframe message
       window.addEventListener('message', function (event) {
         // 只接收來自 #inffits_ctryon_window 的訊息
@@ -7809,33 +7847,29 @@
         if (tryonIframe && event.source === tryonIframe.contentWindow) {
           // console.log('[iframe message]', event.data)
           if (event.data.header === 'bid') {
-            const bid = event.data.value
-            // console.log('收到新的 bid 資料:', bid)
-            bid.Brand = Brand
-            // 確保 fakeData 有正確的資料結構
-            if (!fakeData.personalized_recommendation) {
-              // console.warn('fakeData.personalized_recommendation 不存在，使用預設值')
-              fakeData.personalized_recommendation = { ctype_val: '' }
+            applyBidUpdate(event.data.value, false)
+            // 廣播給其他分頁，讓同品牌頁面同步載入相同的身體測量資訊
+            if (bidSyncChannel) {
+              bidSyncChannel.postMessage({ type: 'bid', brand: Brand, bid: window.__lastSyncedBid })
             }
-            if (!fakeData.more_recommendation) {
-              // console.warn('fakeData.more_recommendation 不存在，使用預設值') 
-              fakeData.more_recommendation = { ctype_val: '' }
-            }
-            
-            // 更新現有推薦元件的 bid 參數
-            updateProductRecommendationBid('personalized-recommendations', bid)
-            updateProductRecommendationBid('more-recommendations', bid)
-            
-            // 延遲更新 mail-section 圖片，確保兩個推薦區塊都載入完成
-            // setTimeout(() => {
-            //   if (typeof updateMailSectionImages === 'function') {
-            //     console.log('🖼️ bid 更新完成，正在更新 mail-section 圖片...')
-            //     updateMailSectionImages()
-            //   }
-            // }, 4000) // 等待 4 秒讓兩個推薦區塊都完全載入
           }
         }
       })
+
+      if (bidSyncChannel) {
+        bidSyncChannel.onmessage = function (event) {
+          const data = event.data || {}
+          if (data.brand !== Brand) return
+          if (data.type === 'bid' && data.bid) {
+            applyBidUpdate(data.bid, true)
+          } else if (data.type === 'request-bid' && window.__lastSyncedBid) {
+            // 回應新開分頁的同步請求，補發最後一次的身體測量資訊
+            bidSyncChannel.postMessage({ type: 'bid', brand: Brand, bid: window.__lastSyncedBid })
+          }
+        }
+        // 頁面載入時向其他分頁請求既有的身體測量資訊
+        bidSyncChannel.postMessage({ type: 'request-bid', brand: Brand })
+      }
       
       // 新增函式：更新推薦元件的 bid 參數
       function updateProductRecommendationBid(containerId, newBid) {
