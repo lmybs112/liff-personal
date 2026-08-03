@@ -4091,25 +4091,18 @@
       const type = params.get('type') || 'pd'
 
       // 寫死：所有商品卡／試衣 CTA 一律開 keepbodyinfo（含 embedded.js 動態注入）
+      // 只改 href／target，勿 preventDefault + window.open（會被瀏覽器擋彈窗）
       const PRODUCT_LINK_SELECTOR =
         'a.embeddedItem, #tryonProductLink, #tryonQrLink, #tryonProductExternalLink, a#tryonProductName'
       function forceKeepbodyinfoLinks(root) {
         ;(root || document).querySelectorAll(PRODUCT_LINK_SELECTOR).forEach(function (a) {
+          if (a.getAttribute('href') === KEEPBODYINFO_URL && a.getAttribute('target') === '_blank') return
           a.setAttribute('href', KEEPBODYINFO_URL)
           a.setAttribute('data-link', KEEPBODYINFO_URL)
+          a.setAttribute('target', '_blank')
+          a.setAttribute('rel', 'noopener noreferrer')
         })
       }
-      document.addEventListener(
-        'click',
-        function (e) {
-          var a = e.target && e.target.closest && e.target.closest(PRODUCT_LINK_SELECTOR)
-          if (!a) return
-          e.preventDefault()
-          e.stopPropagation()
-          window.open(KEEPBODYINFO_URL, '_blank', 'noopener,noreferrer')
-        },
-        true
-      )
       if (typeof MutationObserver !== 'undefined') {
         new MutationObserver(function () {
           forceKeepbodyinfoLinks()
