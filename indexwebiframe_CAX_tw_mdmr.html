@@ -1015,6 +1015,92 @@
             } catch (e) {}
         })();
     </script>
+    <script>
+        // BroadcastChannel：同 origin iframe（試衣頁 ↔ keepbodyinfo）同步身材資料，避免重複輸入
+        (function () {
+            var CHANNEL = 'inffits-sizeai-body-sync';
+            var KEYS = [
+                'BodyID', 'BodyID_color', 'BodyID_size', 'BodyMID_size',
+                'Pattern_Prefers', 'SizeAIFast_switch', 'TID',
+                'BodyID0', 'BodyID1', 'BodyID2', 'BodyID3', 'BodyID4', 'BodyID5',
+                'CLOTHLIST', 'tb_cloth'
+            ];
+            if (typeof BroadcastChannel === 'undefined') return;
+            var bc;
+            try { bc = new BroadcastChannel(CHANNEL); } catch (e) { return; }
+            var applying = false;
+            var publishTimer = null;
+
+            function snapshot() {
+                var data = {};
+                for (var i = 0; i < KEYS.length; i++) {
+                    var k = KEYS[i];
+                    try {
+                        var v = localStorage.getItem(k);
+                        if (v != null) data[k] = v;
+                    } catch (e) {}
+                }
+                return data;
+            }
+
+            function apply(data) {
+                if (!data || typeof data !== 'object') return;
+                applying = true;
+                try {
+                    Object.keys(data).forEach(function (k) {
+                        if (KEYS.indexOf(k) === -1) return;
+                        try { localStorage.setItem(k, data[k]); } catch (e) {}
+                    });
+                } finally {
+                    applying = false;
+                }
+            }
+
+            function publish(reason) {
+                if (applying) return;
+                var data = snapshot();
+                if (!data.BodyID && !data.BodyID_size && !data.BodyID_color) return;
+                try {
+                    bc.postMessage({ type: 'inffits-body-sync', reason: reason || 'update', data: data, ts: Date.now() });
+                } catch (e) {}
+            }
+
+            function schedulePublish(reason) {
+                if (applying) return;
+                clearTimeout(publishTimer);
+                publishTimer = setTimeout(function () { publish(reason); }, 200);
+            }
+
+            bc.onmessage = function (ev) {
+                var msg = ev && ev.data;
+                if (!msg || msg.type !== 'inffits-body-sync') return;
+                if (msg.request) {
+                    publish('response');
+                    return;
+                }
+                if (msg.data) apply(msg.data);
+            };
+
+            try { bc.postMessage({ type: 'inffits-body-sync', request: true, ts: Date.now() }); } catch (e) {}
+
+            try {
+                var _setItem = Storage.prototype.setItem;
+                Storage.prototype.setItem = function (k, v) {
+                    _setItem.call(this, k, v);
+                    if (this === localStorage && KEYS.indexOf(String(k)) !== -1) schedulePublish('setItem:' + k);
+                };
+            } catch (e) {}
+
+            window.addEventListener('message', function (e) {
+                var d = e && e.data;
+                if (!d) return;
+                var header = d.MsgHeader || d.header;
+                if (header === 'SizeAI_Fast' || header === 'FML_Done' || header === 'bid' || header === 'IDRxGet') {
+                    schedulePublish(header);
+                }
+            });
+        })();
+    </script>
 
     <script src="https://inffits.com/webDesign/HTML/js/iframe/inf_main_CAXX.min.js"></script>
     <script>
