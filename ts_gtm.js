@@ -41,20 +41,72 @@ function Condition_Loaded() {
 
 function Trigger_infFITS() {
     var a, _, v, s, g, c, o, e, y = "G-H9V8PTN2X4",
-        i = !1,
-        hrefLower = window.location.href.toLowerCase(),
-        IS_SHOPLINE = hrefLower.indexOf("/products/") > -1,
-        IS_91APP = hrefLower.indexOf("/salepage/") > -1,
-        IS_PRODUCT_PAGE = IS_SHOPLINE || IS_91APP,
-        BRAND = "MDMR",
-        FIXED_URL = "https://brashop.modemarie.com.tw/SalePage/Index/6538644",
+        i = !1;
+    // Shopline keepbodyinfo → 固定對應 Modemarie 商品與 MDMR iframe
+    var FIXED_PRODUCT_URL = "https://brashop.modemarie.com.tw/SalePage/Index/6538644",
         FIXED_PRODUCT_ID = "6538644",
-        FIXED_HOSTNAME = "brashop.modemarie.com.tw";
+        FIXED_HOSTNAME = "brashop.modemarie.com.tw",
+        FIXED_BRAND = "MDMR",
+        // 優先：window.INFFITS_IFRAME_SRC；其次：與 ts_gtm.js 同目錄的 indexwebiframe_CAX_tw_mdmr.html；最後退回 CDN
+        IFRAME_SRC_BASE = (function() {
+            if (window.INFFITS_IFRAME_SRC) return window.INFFITS_IFRAME_SRC;
+            try {
+                var ss = document.getElementsByTagName("script");
+                for (var i = ss.length - 1; i >= 0; i--) {
+                    var src = ss[i].src || "";
+                    if (src && (src.indexOf("ts_gtm") !== -1 || src.indexOf("gtm_MDMR") !== -1)) {
+                        return src.substring(0, src.lastIndexOf("/") + 1) + "indexwebiframe_CAX_tw_mdmr.html"
+                    }
+                }
+            } catch (e) {}
+            return "https://inffits.com/webDesign/HTML/js/iframe/indexwebiframe_CAX_tw_mdmr.html"
+        })();
+
+    function isInfProductPage() {
+        var href = window.location.href.toLowerCase();
+        return href.includes("/salepage/") || href.includes("/products/keepbodyinfo")
+    }
+
+    function getProductTitle() {
+        var el = document.querySelector(".salepage-title") || document.querySelector(".Product-title") || document.querySelector("h1");
+        return el ? el.innerText : ""
+    }
+
+    function getProductPrice() {
+        var el = document.querySelector(".salepage-price") || document.querySelector(".js-price") || document.querySelector(".price");
+        return el ? el.innerText : ""
+    }
+
+    function getSizefastAnchor() {
+        return document.querySelector(".sku-wrapper") || document.querySelector(".product-sku") || document.querySelector(".qty-wrapper") || document.querySelector(".product-detail-button-container") || document.querySelector(".product-detail-actions") || document.querySelector(".js-product-info")
+    }
+
+    function getQtyValue() {
+        var el = document.querySelector(".qty-number input") || document.querySelector(".form-quantity input") || document.querySelector('input[name="quantity"]');
+        return el && el.value ? el.value.toString() : "1"
+    }
+
+    function getProductImageSrc() {
+        var el = document.querySelector(".media-carousel-img") || document.querySelector(".small-image") || document.querySelector(".ProductDetail-product-gallery img") || document.querySelector(".Product-image img") || document.querySelector('meta[property="og:image"]');
+        return el ? (el.src || el.getAttribute("content") || "") : ""
+    }
+
+    function isPageReady() {
+        if (document.querySelector(".salepage-container")) return !(440 < window.innerWidth && null === document.querySelector(".sku-wrapper"));
+        return null !== document.querySelector(".ProductDetail-container") || null !== document.querySelector(".js-product-info")
+    }
 
     function b(e) {
         if (e) try {
-            var t = new URL(e);
-            return -1 !== ["inffits.com", "www.inffits.com", "brashop.modemarie.tw"].indexOf(t.hostname)
+            var t = new URL(e),
+                allowed = ["inffits.com", "www.inffits.com", "brashop.modemarie.tw", "brashop.modemarie.com.tw"];
+            try {
+                allowed.push(new URL(IFRAME_SRC_BASE, location.href).hostname)
+            } catch (err) {}
+            try {
+                allowed.push(location.hostname)
+            } catch (err) {}
+            return -1 !== allowed.indexOf(t.hostname)
         } catch (e) {
             return
         }
@@ -64,94 +116,21 @@ function Trigger_infFITS() {
         dataLayer.push(arguments)
     }
 
-    function getProductTitle() {
-        var el = document.querySelector(".salepage-title") || document.querySelector("h1.Product-title") || document.querySelector(".Product-title");
-        return el ? (el.innerText || "").trim() : ""
-    }
-
-    function getProductPrice() {
-        var el = document.querySelector(".salepage-price") || document.querySelector(".price-sale") || document.querySelector(".js-price") || document.querySelector(".price-regular");
-        return el ? (el.innerText || "").trim() : ""
-    }
-
-    function getProductId() {
-        return FIXED_PRODUCT_ID
-    }
-
-    function getProductImageSrc() {
-        var el = document.querySelector("#sl-product-image") || (window.innerWidth < 440 ? document.querySelector(".media-carousel-img") : document.querySelector(".small-image")) || document.querySelector(".media-carousel-img") || document.querySelector(".small-image") || document.querySelector(".ProductDetail-product-gallery img");
-        return el && el.src ? el.src : ""
-    }
-
-    function getQtyValue() {
-        var input, q;
-        if (IS_SHOPLINE) {
-            input = document.querySelector(".quantity input.form-control") || document.querySelector(".quantity input") || document.querySelector(".product-variation-dropdown input");
-            return input ? String(input.value || "1") : "1"
-        }
-        q = document.querySelector(".qty-number");
-        return q && q.querySelector("input") ? q.querySelector("input").value.toString() : "1"
-    }
-
-    function getSizeInsertTarget() {
-        return document.querySelector(".sku-wrapper") || document.querySelector(".product-sku") || document.querySelector(".qty-wrapper") || document.querySelector(".quantity-wrapper") || document.querySelector(".quantity") || document.querySelector(".product-detail-actions")
-    }
-
-    function isProductPageReady() {
-        if (IS_SHOPLINE) return null !== document.querySelector(".ProductDetail-container") || null !== document.querySelector(".js-product-info") || null !== document.querySelector("h1.Product-title");
-        if (null === document.querySelector(".salepage-container")) return !1;
-        if (440 < window.innerWidth && null === document.querySelector(".sku-wrapper")) return !1;
-        return !0
-    }
-
-    function buildModelPayload() {
-        return {
-            Brand: BRAND,
-            url: FIXED_URL,
-            CONFIG: "on",
-            "91APP": "on",
-            DB: "on",
-            hostname: FIXED_HOSTNAME
-        }
-    }
-
     function r() {
-        var labels, n, t;
-        document.querySelectorAll(".sku-ul").forEach(function(e) {
-            try {
-                if (e.previousSibling.previousSibling.innerText.includes("尺寸") && 0 < e.children.length)
-                    for (var i = e.children.length, n = 0; n < i; n++) e.children[n].querySelector(".sku-link").innerText.replaceAll(" ", "").split("(")[0] == a.replaceAll(" ", "") && e.children[n].querySelector(".sku-link").click()
-            } catch (err) {}
-        });
-        if (a && 0 < document.querySelectorAll(".variation-label-container").length) {
-            labels = document.querySelectorAll(".variation-label");
-            for (n = 0; n < labels.length; n++) {
-                t = labels[n].innerText.replaceAll(" ", "").split("(")[0];
-                t == a.replaceAll(" ", "") && labels[n].click()
-            }
-        }
+        document.querySelectorAll(".sku-ul").forEach(function(e, t) {
+            if (e.previousSibling.previousSibling.innerText.includes("尺寸") && 0 < e.children.length)
+                for (var i = e.children.length, n = 0; n < i; n++) e.children[n].querySelector(".sku-link").innerText.replaceAll(" ", "").split("(")[0] == a.replaceAll(" ", "") && e.children[n].querySelector(".sku-link").click()
+        })
     }
 
     function h(e) {
-        var t = getProductPrice(),
-            i, o = getProductTitle(),
+        var t;
+        if (null !== (document.querySelector(".salepage-price") || document.querySelector(".js-price") || document.querySelector(".price")) && (t = getProductPrice()), null !== document.querySelector(".sku-ul"))
+            for (var i, n = document.querySelector(".sku-ul").children.length, a = 0; a < n; a++) document.querySelector(".sku-ul").children[a].querySelector(".sku-link").classList.contains("cms-primaryBtnTextColor") && (i = document.querySelector(".sku-ul").children[a].querySelector(".sku-link").innerText);
+        var o = getProductTitle(),
             r = [],
-            d = getProductId(),
-            n, colorIdx, selected, titles;
-        if (IS_SHOPLINE) {
-            titles = document.querySelectorAll(".variation_title");
-            for (n = 0; n < titles.length; n++) titles[n].innerText.includes("顏色") && (colorIdx = n);
-            selected = document.querySelectorAll(".variation-label--selected");
-            if (1 < selected.length) i = selected[1].innerText, o = selected[0].innerText;
-            else if (1 === selected.length) i = selected[0].innerText, void 0 !== colorIdx && titles[colorIdx] && (o = titles[colorIdx].innerText);
-            document.querySelectorAll(".variation-label--out-of-stock").forEach(function(el) {
-                r.push(el.innerText)
-            })
-        } else {
-            if (null !== document.querySelector(".sku-ul"))
-                for (n = 0; n < document.querySelector(".sku-ul").children.length; n++) document.querySelector(".sku-ul").children[n].querySelector(".sku-link").classList.contains("cms-primaryBtnTextColor") && (i = document.querySelector(".sku-ul").children[n].querySelector(".sku-link").innerText)
-        }
-        return e && document.getElementById("inffits_ctryon_window") && document.getElementById("inffits_ctryon_window").contentWindow.postMessage({
+            d = FIXED_PRODUCT_ID;
+        return e && document.getElementById("inffits_ctryon_window").contentWindow.postMessage({
             MsgHeader: "AddToCart_click",
             Size: i,
             Color: o,
@@ -180,23 +159,11 @@ function Trigger_infFITS() {
                 jQuery("#inf_close").fadeIn()
             }, 350)) : 0 == e.data["data-type"] && (jQuery("#inf_close").hide(), jQuery("#inf_close").css("top", "16%"), setTimeout(function() {
                 jQuery("#inf_close").fadeIn()
-            }, 350))), "SizeAI_Fast" == e.data.MsgHeader && null !== document.getElementById("inffits_ctryon_window") && (jQuery(".inf_sf-main").hide(), jQuery("#loader-section").hide(), "4_2" == e.data.DP_CODE && !getProductTitle().includes("內衣") || "-1" == e.data.DP_CODE || "-1min" == e.data.DP_CODE || [e.data.Top_Per, e.data.Sec_Per].every(e => "不建議" === e) && !getProductTitle().includes("內衣") ? jQuery(".inf_sf-main").hide() : (jQuery("#front_top_size").parent().fadeIn(), jQuery("#front_top_size").parent()[0].style.display = "flex", jQuery("#front_sec_size").parent().fadeIn(), jQuery("#front_sec_size").parent()[0].style.display = "flex", "4_2" == e.data.DP_CODE && getProductTitle().includes("內衣") ? (jQuery("#front_top_per").hide(), jQuery("#front_sec_per").hide()) : (jQuery("#front_top_per").show(), jQuery("#front_sec_per").show()), jQuery("#front_top_per").html(e.data.Top_Per), jQuery("#front_sec_per").html(e.data.Sec_Per), jQuery("#front_top_size").text(e.data.Top_Size), jQuery("#front_sec_size").text(e.data.Sec_Size), a = e.data.Top_Size, r(), jQuery(".inf_sf-section-block")[0].click(), jQuery(".inf_sf-main").css("background", "#eee"), jQuery(".inf_sf-main").css("display", "flex")), function() {
-                var imgSrc = getProductImageSrc();
-                imgSrc && (jQuery(".logo-img").css("background-image", 'url("' + imgSrc + '")'), document.getElementById("inffits_ctryon_window").contentWindow.postMessage({
-                    MsgHeader: "ImageUpdate",
-                    src: imgSrc
-                }, "*"))
-            }(), 1 == e.data.sarr.length && (jQuery(".inf_sf-section-block")[1].style.display = "none"), e.data.Auto && (79488e5 < (new Date).getTime() - e.data.TID ? A("set", "user_properties", {
+            }, 350))), "SizeAI_Fast" == e.data.MsgHeader && null !== document.getElementById("inffits_ctryon_window") && (jQuery(".inf_sf-main").hide(), jQuery("#loader-section").hide(), "4_2" == e.data.DP_CODE && !getProductTitle().includes("內衣") || "-1" == e.data.DP_CODE || "-1min" == e.data.DP_CODE || [e.data.Top_Per, e.data.Sec_Per].every(e => "不建議" === e) && !getProductTitle().includes("內衣") ? jQuery(".inf_sf-main").hide() : (jQuery("#front_top_size").parent().fadeIn(), jQuery("#front_top_size").parent()[0].style.display = "flex", jQuery("#front_sec_size").parent().fadeIn(), jQuery("#front_sec_size").parent()[0].style.display = "flex", "4_2" == e.data.DP_CODE && getProductTitle().includes("內衣") ? (jQuery("#front_top_per").hide(), jQuery("#front_sec_per").hide()) : (jQuery("#front_top_per").show(), jQuery("#front_sec_per").show()), jQuery("#front_top_per").html(e.data.Top_Per), jQuery("#front_sec_per").html(e.data.Sec_Per), jQuery("#front_top_size").text(e.data.Top_Size), jQuery("#front_sec_size").text(e.data.Sec_Size), a = e.data.Top_Size, r(), jQuery(".inf_sf-section-block")[0].click(), jQuery(".inf_sf-main").css("background", "#eee"), jQuery(".inf_sf-main").css("display", "flex")), (function(){var s=getProductImageSrc();s&&(jQuery(".logo-img").css("background-image",'url("'+s+'")'),document.getElementById("inffits_ctryon_window").contentWindow.postMessage({MsgHeader:"ImageUpdate",src:s},"*"))})(), 1 == e.data.sarr.length && (jQuery(".inf_sf-section-block")[1].style.display = "none"), e.data.Auto && (79488e5 < (new Date).getTime() - e.data.TID ? A("set", "user_properties", {
                 inffits_source_by_event: "null"
             }) : A("set", "user_properties", {
                 inffits_source_by_event: "inffits_used"
-            }))), "SizeAI_Fast_pass" == e.data.MsgHeader && null !== document.getElementById("inffits_ctryon_window") && (function() {
-                var imgSrc = getProductImageSrc();
-                imgSrc && (jQuery(".logo-img").css("background-image", 'url("' + imgSrc + '")'), document.getElementById("inffits_ctryon_window").contentWindow.postMessage({
-                    MsgHeader: "ImageUpdate",
-                    src: imgSrc
-                }, "*"))
-            }(), jQuery("#loader-section").hide(), jQuery(".inf_sf-main").hide()), "SizeAI_fast_off" == e.data.MsgHeader && (s = !1))
+            }))), "SizeAI_Fast_pass" == e.data.MsgHeader && null !== document.getElementById("inffits_ctryon_window") && ((function(){var s=getProductImageSrc();s&&(jQuery(".logo-img").css("background-image",'url("'+s+'")'),document.getElementById("inffits_ctryon_window").contentWindow.postMessage({MsgHeader:"ImageUpdate",src:s},"*"))})(), jQuery("#loader-section").hide(), jQuery(".inf_sf-main").hide()), "SizeAI_fast_off" == e.data.MsgHeader && (s = !1))
         }), window.location.href.includes("Pay/Finish")) {
         function n(A) {
             function h(e) {
@@ -337,7 +304,7 @@ function Trigger_infFITS() {
             i = e[1],
             n = e[2],
             a = e[3],
-            o = getProductId(),
+            o = FIXED_PRODUCT_ID,
             r = getProductTitle(),
             d = getQtyValue(),
             s = "",
@@ -376,8 +343,8 @@ function Trigger_infFITS() {
     }
 
     function t() {
-        var e = document.querySelectorAll(".add-to-cart-btn, #btn-add-to-cart, .js-btn-main-add-to-cart, .btn-purchase-action"),
-            t = document.querySelectorAll(".immediately-buy-btn, .js-btn-main-checkout, .btn-cart-fixed"),
+        var e = document.querySelectorAll(".add-to-cart-btn"),
+            t = document.querySelectorAll(".immediately-buy-btn"),
             i = document.querySelectorAll(".btn-buy-now");
         0 < e.length && e.forEach(function(e) {
             e.addEventListener("click", function() {
@@ -462,14 +429,14 @@ function Trigger_infFITS() {
         LINK_SRC = "https://inffits.com/";
         var e = document.createElement("div");
         e.innerHTML = '<div id="LS_include_div" style="position:absolute; top:0px; text-align:left; display:none; border:none; outline:none;  z-index:19; touch-action:none"><iframe id="inffits_LS_window" style=" width:100%; height:100%; display:none; position:relative; border:none; outline:none;  z-index:19" src="https://inffits.com/webDesign/HTML/DB/LS/LS_include_Size.html"></iframe></div>', document.body.appendChild(e)
-    })), IS_PRODUCT_PAGE && (v = "MDMR", "undefined" == typeof AWS ? ((e = document.createElement("script")).type = "text/javascript", e.src = "https://sdk.amazonaws.com/js/aws-sdk-2.243.1.min.js", document.head.appendChild(e), e.addEventListener("load", function() {
+    })), isInfProductPage() && (v = FIXED_BRAND, "undefined" == typeof AWS ? ((e = document.createElement("script")).type = "text/javascript", e.src = "https://sdk.amazonaws.com/js/aws-sdk-2.243.1.min.js", document.head.appendChild(e), e.addEventListener("load", function() {
         t()
     })) : t()); {
         function _(e) {
             for (var t = "", i = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789", n = i.length, a = 0; a < e; a++) t += i.charAt(Math.floor(Math.random() * n));
             return t
         }
-        IS_PRODUCT_PAGE && ((e = document.createElement("style")).innerText = `
+        isInfProductPage() && ((e = document.createElement("style")).innerText = `
         @media screen and (min-height:721px){
             .inffits_cblock{position:fixed;right:0;bottom:0;height: 720px; width: 480px !important; }
             .ctryon { margin: auto; height: 720px; width: 480px !important; left:0px;}
@@ -551,7 +518,14 @@ function Trigger_infFITS() {
                     FontWeightBold: c.FontWeightBold
                 }, "*")
             }
-        }, !1), e = buildModelPayload(), jQuery.ajax({
+        }, !1), e = {
+            Brand: FIXED_BRAND,
+            url: FIXED_PRODUCT_URL,
+            CONFIG: "on",
+            "91APP": "on",
+            DB: "on",
+            hostname: FIXED_HOSTNAME
+        }, jQuery.ajax({
             url: "https://api.inffits.com/httpgpi/model",
             method: "POST",
             dataType: "text",
@@ -559,20 +533,14 @@ function Trigger_infFITS() {
             data: JSON.stringify(e),
             async: !0,
             success: e => {
-                var t, parsed;
-                try {
-                    parsed = "null" !== e && e ? JSON.parse(e) : null
-                } catch (err) {
-                    return
-                }
-                t = parsed && parsed.pOnline;
-                parsed && t && (o = parsed.Gender_ClothID, i = parsed, s = !0, c = i.Settings.Display, document.body.insertAdjacentHTML("beforeend", '<div class="" id="SizeAItag" style="position: fixed;right: 0px;top:calc(50vh - 62px);width: 15px;background: black;text-align: center;color: white;letter-spacing: .1rem;border-radius: 3px 0 0 3px;font-size: 12px;font-weight: 300;box-shadow: rgba(0, 0, 0, 0.16) 0px 3px 6px, rgba(0, 0, 0, 0.23) 0px 3px 6px;font-family: Noto Sans TC, sans-serif; padding:10px;z-index: 1000000000;cursor:pointer;transition: 0.5s all;opacity:0.1;pointer-events: none;font-weight:400"><span style="font-family: inherit">AI<br>找<br>尺<br>寸</span><svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" class="eva eva-arrow-forward-outline" fill="#FFD6D6" style="position: relative;top: 8px;left:0px;color: white;transform: rotate(90deg);display:block ;background: white;border-radius: 100%;margin-bottom: 10px "><g data-name="Layer 2"><g data-name="arrow-forward"><rect width="24" height="24" transform="rotate(-90 12 12)" opacity="0"></rect><path d="M5 13h11.86l-3.63 4.36a1 1 0 0 0 1.54 1.28l5-6a1.19 1.19 0 0 0 .09-.15c0-.05.05-.08.07-.13A1 1 0 0 0 20 12a1 1 0 0 0-.07-.36c0-.05-.05-.08-.07-.13a1.19 1.19 0 0 0-.09-.15l-5-6A1 1 0 0 0 14 5a1 1 0 0 0-.64.23 1 1 0 0 0-.13 1.41L16.86 11H5a1 1 0 0 0 0 2z"></path></g></g></svg></div>'), "left" == i.Settings.SizeAITag.position ? (document.getElementById("SizeAItag").style.left = 0, document.getElementById("SizeAItag").style.right = "auto", document.getElementById("SizeAItag").style.borderRadius = "0px 3px 3px 0px") : "right" == i.Settings.SizeAITag.position && (document.getElementById("SizeAItag").style.right = 0, document.getElementById("SizeAItag").style.left = "auto", document.getElementById("SizeAItag").style.borderRadius = "3px 0px 0px 3px"), document.getElementById("SizeAItag").style.background = "#FFD6D6", document.getElementById("SizeAItag").style.color = "#5A5857", document.getElementById("SizeAItag").querySelector("span").innerHTML = i.Settings.SizeAITag.tagtext, i.Settings.SizeAITag.tagtextheight, document.getElementById("SizeAItag").style.lineHeight = "normal", 1 == i.Settings.SizeAITag.tagarrow ? document.getElementById("SizeAItag").querySelector("svg").style.display = "block" : document.getElementById("SizeAItag").querySelector("svg").style.display = "none", document.getElementById("SizeAItag").style.top = "calc(50vh - " + document.getElementById("SizeAItag").clientHeight / 2 + "px)", jQuery(function() {
+                var t = "null" !== e && JSON.parse(e).pOnline;
+                "null" !== e && t && (o = JSON.parse(e).Gender_ClothID, i = JSON.parse(e), s = !0, c = i.Settings.Display, document.body.insertAdjacentHTML("beforeend", '<div class="" id="SizeAItag" style="position: fixed;right: 0px;top:calc(50vh - 62px);width: 15px;background: black;text-align: center;color: white;letter-spacing: .1rem;border-radius: 3px 0 0 3px;font-size: 12px;font-weight: 300;box-shadow: rgba(0, 0, 0, 0.16) 0px 3px 6px, rgba(0, 0, 0, 0.23) 0px 3px 6px;font-family: Noto Sans TC, sans-serif; padding:10px;z-index: 1000000000;cursor:pointer;transition: 0.5s all;opacity:0.1;pointer-events: none;font-weight:400"><span style="font-family: inherit">AI<br>找<br>尺<br>寸</span><svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" class="eva eva-arrow-forward-outline" fill="#FFD6D6" style="position: relative;top: 8px;left:0px;color: white;transform: rotate(90deg);display:block ;background: white;border-radius: 100%;margin-bottom: 10px "><g data-name="Layer 2"><g data-name="arrow-forward"><rect width="24" height="24" transform="rotate(-90 12 12)" opacity="0"></rect><path d="M5 13h11.86l-3.63 4.36a1 1 0 0 0 1.54 1.28l5-6a1.19 1.19 0 0 0 .09-.15c0-.05.05-.08.07-.13A1 1 0 0 0 20 12a1 1 0 0 0-.07-.36c0-.05-.05-.08-.07-.13a1.19 1.19 0 0 0-.09-.15l-5-6A1 1 0 0 0 14 5a1 1 0 0 0-.64.23 1 1 0 0 0-.13 1.41L16.86 11H5a1 1 0 0 0 0 2z"></path></g></g></svg></div>'), "left" == i.Settings.SizeAITag.position ? (document.getElementById("SizeAItag").style.left = 0, document.getElementById("SizeAItag").style.right = "auto", document.getElementById("SizeAItag").style.borderRadius = "0px 3px 3px 0px") : "right" == i.Settings.SizeAITag.position && (document.getElementById("SizeAItag").style.right = 0, document.getElementById("SizeAItag").style.left = "auto", document.getElementById("SizeAItag").style.borderRadius = "3px 0px 0px 3px"), document.getElementById("SizeAItag").style.background = "#FFD6D6", document.getElementById("SizeAItag").style.color = "#5A5857", document.getElementById("SizeAItag").querySelector("span").innerHTML = i.Settings.SizeAITag.tagtext, i.Settings.SizeAITag.tagtextheight, document.getElementById("SizeAItag").style.lineHeight = "normal", 1 == i.Settings.SizeAITag.tagarrow ? document.getElementById("SizeAItag").querySelector("svg").style.display = "block" : document.getElementById("SizeAItag").querySelector("svg").style.display = "none", document.getElementById("SizeAItag").style.top = "calc(50vh - " + document.getElementById("SizeAItag").clientHeight / 2 + "px)", jQuery(function() {
                     function t() {
-                        i = getSizeInsertTarget(), null !== i && (i.insertAdjacentHTML(IS_SHOPLINE ? "beforebegin" : "beforeend", '<div id="infFITS_sizefast" style="margin-top:120px;text-align:center;font-weight: 600;font-family: Noto Sans TC,sans-serif;cursor: pointer;display: block;position: relative;padding: 10px 0;letter-spacing: .1rem;margin-bottom:0px;opacity: 0;-webkit-animation: fadeIn_wrapper 1s 0.4s ease forwards; animation: fadeIn_wrapper 1s 0.4s ease forwards;"><div style="position: absolute;right: -6px;border: 0;opacity: 0.5;bottom:-24px"><img src="data:image/png;base64,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" height="30px"></div><div id="infFITS_sizefast_wrapper"><div class="wrapper-flex"><div><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 9.19 15.56" style="fill:none;stroke:#000000;stroke-width:2px;height: 10px;position:relative;right:3px;"><path d="m.71.71l7.07,7.07L.71,14.85"></path></svg></div><div class="inf_sf-container"><div class="inf_sf-maintext"><div style="font-weight: bold;">AI</div><div>找尺寸</div></div><div class="inf_sf-main"><div class="inf_sf-section"><div class="inf_sf-section-block"><span id="front_top_size" class="front_size"></span>&nbsp;<span class="front_per active" id="front_top_per"></span><img src="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAEAAAABACAQAAAAAYLlVAAAABGdBTUEAALGPC/xhBQAAACBjSFJNAAB6JgAAgIQAAPoAAACA6AAAdTAAAOpgAAA6mAAAF3CculE8AAAAAmJLR0QA/4ePzL8AAAAJcEhZcwAACBQAAAgUAWFwnqMAAAAHdElNRQfpBgQOLjND9MctAAADZ0lEQVRo3sWZPUwUQRTHf4AREwPCxSPYSAzFYUKDlQJ+RVpa/G6MFYSEXH+tyTXKFYZcbGiEjsJCkouJFIaYwMXEWABixATIwZ3RQgHNHWOxt3hwM7sz+8HN63Zm5/ffna8379VhVqLE6KGbGOeIcJqTwF9+84NNlvnEB5bJm3RYZ4C+zAC9XKCFBkWbEj/5yjxveG8mw610kWCRXYSm7ZIlQVcw8BhJ1rTRlbZGkpg/eCtxVj3BbVslTqtXfB8ZSr7wAkGJDL3m8EZG2PANt22dYRpN8BFS7AWGFwj2GCeii29nOlC4bdO06+FnQsELBDPuEiJMhYa3/oLjQDTyLFS8QJBymo7DAU89+XQcUeF7WQ8dLxBs0CfDt5I5FrxAkJHtjvEAdj1dKxE/io/53PNNbdU+purLAh7RqbtPBVI6eVzpi3R5PHCd7Q8fyfJLUfuNi/8FJELAFxiljQhDfFG0SNj4KNkQ8A8PPu8mn6VtskStBoMGzpae5XlwaMRvsCJptcugVZ0KGQ9wnSVJy5Q1AAsB4+9L5/0Auaq2C0Shn8Ix4KGOSclM6a+nh5bAVneBMV4q6gTfq5610HOCbuU1AwRvecUphrikgc8zxpSyto0rVc8a6IY55e/c5wVnAehk1vXnb3PPQVwTE+xL3pqDZSU+zZmDDjpcJGxz1wHfzHPFUbcCeWlFiYkKvCXhdeB4QR52pF8/QXNVRyoJW9zxiBfsQFHyeJ42aWfnJRL84AVFuYCnyg6PStjitg+8oCgfgkmHuEGlBL94wY58EuYYcOjYlpDzjRfkVctwiauOEmbJMeQbL1hWb0TOEjq45jBMunjBHKSVlc4S/H+9QJCGUek68C7BBF9k1O04NpVgghcU6Hd3SEwkmOHLDom7S6YrwRRfdsl0nFIdCeb4A6c0yqJrYzcJ5njBou2W611MnCR4wVdcTHSvZioJ3vBrh0O5Sa2XZBK84QXJw93oXs+PSvCKX62OIusGKColNHnESwIUJiGaJW6VV8+Ex6hKRh7A1g9SbZLmCe+kjra7KYJUUPMwHTQyHrqAlHPcPBJSoNq2afeYeY2D1ZaEmobrrYEYDzxhkdJPWFjTcTjAyPEGI2YpG6v0Bpa06jOHW6XGaTur1DRxaZcQU7c1T17rC7BlBJy+/wfqq7Fr7G6HRQAAACV0RVh0ZGF0ZTpjcmVhdGUAMjAyNS0wNi0wNFQxNDo0NjoyMSswMDowMArbUkoAAAAldEVYdGRhdGU6bW9kaWZ5ADIwMTgtMTAtMDJUMjE6NTE6MjQrMDA6MDBEpyZsAAAAKHRFWHRkYXRlOnRpbWVzdGFtcAAyMDI1LTA2LTA0VDE0OjQ2OjUxKzAwOjAwJlbCMAAAABl0RVh0U29mdHdhcmUAd3d3Lmlua3NjYXBlLm9yZ5vuPBoAAAAASUVORK5CYII=" width="8px" height="8px" style="position: absolute;right: 2px;top: 2px;display: none;"></div></div><div class="inf_sf-section"><div class="inf_sf-section-block"><span class="front_size" id="front_sec_size"></span> &nbsp;<span class="front_per" id="front_sec_per"></span><img src="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAEAAAABACAQAAAAAYLlVAAAABGdBTUEAALGPC/xhBQAAACBjSFJNAAB6JgAAgIQAAPoAAACA6AAAdTAAAOpgAAA6mAAAF3CculE8AAAAAmJLR0QA/4ePzL8AAAAJcEhZcwAACBQAAAgUAWFwnqMAAAAHdElNRQfpBgQOLjND9MctAAADZ0lEQVRo3sWZPUwUQRTHf4AREwPCxSPYSAzFYUKDlQJ+RVpa/G6MFYSEXH+tyTXKFYZcbGiEjsJCkouJFIaYwMXEWABixATIwZ3RQgHNHWOxt3hwM7sz+8HN63Zm5/ffna8379VhVqLE6KGbGOeIcJqTwF9+84NNlvnEB5bJm3RYZ4C+zAC9XKCFBkWbEj/5yjxveG8mw610kWCRXYSm7ZIlQVcw8BhJ1rTRlbZGkpg/eCtxVj3BbVslTqtXfB8ZSr7wAkGJDL3m8EZG2PANt22dYRpN8BFS7AWGFwj2GCeii29nOlC4bdO06+FnQsELBDPuEiJMhYa3/oLjQDTyLFS8QJBymo7DAU89+XQcUeF7WQ8dLxBs0CfDt5I5FrxAkJHtjvEAdj1dKxE/io/53PNNbdU+purLAh7RqbtPBVI6eVzpi3R5PHCd7Q8fyfJLUfuNi/8FJELAFxiljQhDfFG0SNj4KNkQ8A8PPu8mn6VtskStBoMGzpae5XlwaMRvsCJptcugVZ0KGQ9wnSVJy5Q1AAsB4+9L5/0Auaq2C0Shn8Ix4KGOSclM6a+nh5bAVneBMV4q6gTfq5610HOCbuU1AwRvecUphrikgc8zxpSyto0rVc8a6IY55e/c5wVnAehk1vXnb3PPQVwTE+xL3pqDZSU+zZmDDjpcJGxz1wHfzHPFUbcCeWlFiYkKvCXhdeB4QR52pF8/QXNVRyoJW9zxiBfsQFHyeJ42aWfnJRL84AVFuYCnyg6PStjitg+8oCgfgkmHuEGlBL94wY58EuYYcOjYlpDzjRfkVctwiauOEmbJMeQbL1hWb0TOEjq45jBMunjBHKSVlc4S/H+9QJCGUek68C7BBF9k1O04NpVgghcU6Hd3SEwkmOHLDom7S6YrwRRfdsl0nFIdCeb4A6c0yqJrYzcJ5njBou2W611MnCR4wVdcTHSvZioJ3vBrh0O5Sa2XZBK84QXJw93oXs+PSvCKX62OIusGKColNHnESwIUJiGaJW6VV8+Ex6hKRh7A1g9SbZLmCe+kjra7KYJUUPMwHTQyHrqAlHPcPBJSoNq2afeYeY2D1ZaEmobrrYEYDzxhkdJPWFjTcTjAyPEGI2YpG6v0Bpa06jOHW6XGaTur1DRxaZcQU7c1T17rC7BlBJy+/wfqq7Fr7G6HRQAAACV0RVh0ZGF0ZTpjcmVhdGUAMjAyNS0wNi0wNFQxNDo0NjoyMSswMDowMArbUkoAAAAldEVYdGRhdGU6bW9kaWZ5ADIwMTgtMTAtMDJUMjE6NTE6MjQrMDA6MDBEpyZsAAAAKHRFWHRkYXRlOnRpbWVzdGFtcAAyMDI1LTA2LTA0VDE0OjQ2OjUxKzAwOjAwJlbCMAAAABl0RVh0U29mdHdhcmUAd3d3Lmlua3NjYXBlLm9yZ5vuPBoAAAAASUVORK5CYII=" width="8px" height="8px" style="position: absolute; right: 2px; top: 2px; display: none;"></div></div></div><div id="loader-section"><div id="loader"><img src="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAABAAAAAQCAQAAAC1+jfqAAAABGdBTUEAALGPC/xhBQAAACBjSFJNAAB6JgAAgIQAAPoAAACA6AAAdTAAAOpgAAA6mAAAF3CculE8AAAAAmJLR0QA/4ePzL8AAAAJcEhZcwAAFxIAABcSAWef0lIAAAAHdElNRQfpBgwKLSwnbBkoAAAA5ElEQVQoz2XRPUoDURSG4Sc/2qUQxMYFSNSAYjOoCFqqWYQILiroGkylYDYQQxQUFyBEHCSSYoQUyuRaGOJc8p3iwvnee344xCo50ZHJpa7UzencUJjFg/3YbngT5J7cGghy19UIOLCKGxc+bWt69BwDS+Beip4elCNgAvJiqjJ9l51qOLSBkYp1H8ZFMJEVpg8yyZ9RnRUfK1uwiG8/xtN2M9UkEi1B0JJI1OIKX7o4Aq+6/z/jLSrzuao1W3a09a3YA6O4e9tE8K7jRS4Y2IyBXf3CekNn8xesu5TKZe4cK8XmL0olT2O8a5VXAAAAJXRFWHRkYXRlOmNyZWF0ZQAyMDI1LTA2LTEyVDEwOjQ0OjU0KzAwOjAwQl1s+AAAACV0RVh0ZGF0ZTptb2RpZnkAMjAyNS0wNi0xMlQxMDo0NDo1NCswMDowMDMA1EQAAAAodEVYdGRhdGU6dGltZXN0YW1wADIwMjUtMDYtMTJUMTA6NDU6NDQrMDA6MDBHfZ47AAAAAElFTkSuQmCC" height="15px"><div class="cssload-speeding-wheel"></div></div></div></div><div class="logo-img-container"><div class="logo-img"></div></div></div></div></div></div>'), window.innerWidth < 440 && (jQuery("#infFITS_sizefast").css("margin-top", "8px"), jQuery("#infFITS_sizefast").css("margin-bottom", "16px"))), null !== document.getElementById("inffits_cblock") && document.getElementById("inffits_cblock").remove(), (t = document.querySelector("body")).insertAdjacentHTML("beforebegin", '<div style="display:none;position: fixed;width: 100%;height: 100%;top: 0;left: 0;z-index: 1000000000000;background: rgba(0,0,0,0.5);transform:translate(100%)"><div id="infFITS_findSize" class="inffits_cblock" style="display:block;right:0;bottom:0;top:0;left:0 ;position:absolute; z-index:1;margin:auto"><div class="ctryon" style="position:absolute; width:100%; height:100%;top:0px; text-align:left; visibility:visible;  border:none; outline:none;  z-index:1; touch-action:none;"><iframe id="inffits_ctryon_window" style=" width:100%; height:100%; visibility:visible; position:relative; border:none;outline:none;  z-index:14;border-radius:10px;box-shadow: rgba(0, 0, 0, 0.15) 0px 2px 8px;" src="https://inffits.com/webDesign/HTML/js/iframe/indexwebiframe_CAX_tw_mdmr.html?' + o + '"></iframe></div><div id="inf_close" style="position:absolute;top: -5px;z-index: 10000009;right: -10px;padding: 5px;height: 20px;width: 20px;border-radius: 50%;box-shadow: rgb(54 62 81 / 15%) 0px 0.0625rem 0.125rem 0.0625rem;background: white; opacity:1"><img src="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAEAAAABACAQAAAAAYLlVAAAABGdBTUEAALGPC/xhBQAAACBjSFJNAAB6JgAAgIQAAPoAAACA6AAAdTAAAOpgAAA6mAAAF3CculE8AAAAAmJLR0QAAKqNIzIAAAAJcEhZcwAADdcAAA3XAUIom3gAAAAHdElNRQflBB0KLijuiy0TAAABU0lEQVRo3sWZQZKCMBBFX825gtt4ZPEgbrQKV1wA9nHhFFUOxEmgO19XQtV/Tw2Q7gYI9ExM9HS0eHULLwAEbqTf953ojo/cF96NAP3yMZF4cnbFn3l+8HqYPw74KvzFJ+a1gJ/CGp+Y4bo66KOwhU9c4cSjgcI2/sEpf9JS4V+Cr0JRup9CcbKPQlWqvUJ1oq3CrjQ7hd1JNgqHUo4rHE44FmDyG+4PMVtFuaDvW5ZoeR3VK5ji6xXM8XUKLvhyBTd8mYIr/hsgFpx1VRiIRAZ/fF5hZGyDzys0w5cqOOJLFJzxb4Uhix8aFLdA3Fx4iXEP/qeFsfX3l/4F4kUovgzFNyLxrVj8MBI/jsUbEvGWTLwpFW/LxYWJuDQTF6fi8lzcoBC3aMRNKnGbTtyoFLdqxc1qcbtePLCQj2zkQyv52E4+uJSPbjv18BoCF8n4/kKAFws8B+VnA9YUAAAAJXRFWHRkYXRlOmNyZWF0ZQAyMDIxLTA0LTI5VDEwOjQ2OjAzKzAwOjAw6rtp5wAAACV0RVh0ZGF0ZTptb2RpZnkAMjAyMS0wNC0yOVQxMDo0NjowMyswMDowMJvm0VsAAAAZdEVYdFNvZnR3YXJlAHd3dy5pbmtzY2FwZS5vcmeb7jwaAAAAAElFTkSuQmCC" style="position:absolute;top:0;bottom:0;right:0;left:0;width:10px;margin:auto;"></div></div></div>'), document.getElementById("SizeAItag").addEventListener("click", function() {
+                        i = getSizefastAnchor(), null !== i && (i.insertAdjacentHTML("beforeend", '<div id="infFITS_sizefast" style="margin-top:120px;text-align:center;font-weight: 600;font-family: Noto Sans TC,sans-serif;cursor: pointer;display: block;position: relative;padding: 10px 0;letter-spacing: .1rem;margin-bottom:0px;opacity: 0;-webkit-animation: fadeIn_wrapper 1s 0.4s ease forwards; animation: fadeIn_wrapper 1s 0.4s ease forwards;"><div style="position: absolute;right: -6px;border: 0;opacity: 0.5;bottom:-24px"><img src="data:image/png;base64,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" height="30px"></div><div id="infFITS_sizefast_wrapper"><div class="wrapper-flex"><div><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 9.19 15.56" style="fill:none;stroke:#000000;stroke-width:2px;height: 10px;position:relative;right:3px;"><path d="m.71.71l7.07,7.07L.71,14.85"></path></svg></div><div class="inf_sf-container"><div class="inf_sf-maintext"><div style="font-weight: bold;">AI</div><div>找尺寸</div></div><div class="inf_sf-main"><div class="inf_sf-section"><div class="inf_sf-section-block"><span id="front_top_size" class="front_size"></span>&nbsp;<span class="front_per active" id="front_top_per"></span><img src="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAEAAAABACAQAAAAAYLlVAAAABGdBTUEAALGPC/xhBQAAACBjSFJNAAB6JgAAgIQAAPoAAACA6AAAdTAAAOpgAAA6mAAAF3CculE8AAAAAmJLR0QA/4ePzL8AAAAJcEhZcwAACBQAAAgUAWFwnqMAAAAHdElNRQfpBgQOLjND9MctAAADZ0lEQVRo3sWZPUwUQRTHf4AREwPCxSPYSAzFYUKDlQJ+RVpa/G6MFYSEXH+tyTXKFYZcbGiEjsJCkouJFIaYwMXEWABixATIwZ3RQgHNHWOxt3hwM7sz+8HN63Zm5/ffna8379VhVqLE6KGbGOeIcJqTwF9+84NNlvnEB5bJm3RYZ4C+zAC9XKCFBkWbEj/5yjxveG8mw610kWCRXYSm7ZIlQVcw8BhJ1rTRlbZGkpg/eCtxVj3BbVslTqtXfB8ZSr7wAkGJDL3m8EZG2PANt22dYRpN8BFS7AWGFwj2GCeii29nOlC4bdO06+FnQsELBDPuEiJMhYa3/oLjQDTyLFS8QJBymo7DAU89+XQcUeF7WQ8dLxBs0CfDt5I5FrxAkJHtjvEAdj1dKxE/io/53PNNbdU+purLAh7RqbtPBVI6eVzpi3R5PHCd7Q8fyfJLUfuNi/8FJELAFxiljQhDfFG0SNj4KNkQ8A8PPu8mn6VtskStBoMGzpae5XlwaMRvsCJptcugVZ0KGQ9wnSVJy5Q1AAsB4+9L5/0Auaq2C0Shn8Ix4KGOSclM6a+nh5bAVneBMV4q6gTfq5610HOCbuU1AwRvecUphrikgc8zxpSyto0rVc8a6IY55e/c5wVnAehk1vXnb3PPQVwTE+xL3pqDZSU+zZmDDjpcJGxz1wHfzHPFUbcCeWlFiYkKvCXhdeB4QR52pF8/QXNVRyoJW9zxiBfsQFHyeJ42aWfnJRL84AVFuYCnyg6PStjitg+8oCgfgkmHuEGlBL94wY58EuYYcOjYlpDzjRfkVctwiauOEmbJMeQbL1hWb0TOEjq45jBMunjBHKSVlc4S/H+9QJCGUek68C7BBF9k1O04NpVgghcU6Hd3SEwkmOHLDom7S6YrwRRfdsl0nFIdCeb4A6c0yqJrYzcJ5njBou2W611MnCR4wVdcTHSvZioJ3vBrh0O5Sa2XZBK84QXJw93oXs+PSvCKX62OIusGKColNHnESwIUJiGaJW6VV8+Ex6hKRh7A1g9SbZLmCe+kjra7KYJUUPMwHTQyHrqAlHPcPBJSoNq2afeYeY2D1ZaEmobrrYEYDzxhkdJPWFjTcTjAyPEGI2YpG6v0Bpa06jOHW6XGaTur1DRxaZcQU7c1T17rC7BlBJy+/wfqq7Fr7G6HRQAAACV0RVh0ZGF0ZTpjcmVhdGUAMjAyNS0wNi0wNFQxNDo0NjoyMSswMDowMArbUkoAAAAldEVYdGRhdGU6bW9kaWZ5ADIwMTgtMTAtMDJUMjE6NTE6MjQrMDA6MDBEpyZsAAAAKHRFWHRkYXRlOnRpbWVzdGFtcAAyMDI1LTA2LTA0VDE0OjQ2OjUxKzAwOjAwJlbCMAAAABl0RVh0U29mdHdhcmUAd3d3Lmlua3NjYXBlLm9yZ5vuPBoAAAAASUVORK5CYII=" width="8px" height="8px" style="position: absolute;right: 2px;top: 2px;display: none;"></div></div><div class="inf_sf-section"><div class="inf_sf-section-block"><span class="front_size" id="front_sec_size"></span> &nbsp;<span class="front_per" id="front_sec_per"></span><img src="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAEAAAABACAQAAAAAYLlVAAAABGdBTUEAALGPC/xhBQAAACBjSFJNAAB6JgAAgIQAAPoAAACA6AAAdTAAAOpgAAA6mAAAF3CculE8AAAAAmJLR0QA/4ePzL8AAAAJcEhZcwAACBQAAAgUAWFwnqMAAAAHdElNRQfpBgQOLjND9MctAAADZ0lEQVRo3sWZPUwUQRTHf4AREwPCxSPYSAzFYUKDlQJ+RVpa/G6MFYSEXH+tyTXKFYZcbGiEjsJCkouJFIaYwMXEWABixATIwZ3RQgHNHWOxt3hwM7sz+8HN63Zm5/ffna8379VhVqLE6KGbGOeIcJqTwF9+84NNlvnEB5bJm3RYZ4C+zAC9XKCFBkWbEj/5yjxveG8mw610kWCRXYSm7ZIlQVcw8BhJ1rTRlbZGkpg/eCtxVj3BbVslTqtXfB8ZSr7wAkGJDL3m8EZG2PANt22dYRpN8BFS7AWGFwj2GCeii29nOlC4bdO06+FnQsELBDPuEiJMhYa3/oLjQDTyLFS8QJBymo7DAU89+XQcUeF7WQ8dLxBs0CfDt5I5FrxAkJHtjvEAdj1dKxE/io/53PNNbdU+purLAh7RqbtPBVI6eVzpi3R5PHCd7Q8fyfJLUfuNi/8FJELAFxiljQhDfFG0SNj4KNkQ8A8PPu8mn6VtskStBoMGzpae5XlwaMRvsCJptcugVZ0KGQ9wnSVJy5Q1AAsB4+9L5/0Auaq2C0Shn8Ix4KGOSclM6a+nh5bAVneBMV4q6gTfq5610HOCbuU1AwRvecUphrikgc8zxpSyto0rVc8a6IY55e/c5wVnAehk1vXnb3PPQVwTE+xL3pqDZSU+zZmDDjpcJGxz1wHfzHPFUbcCeWlFiYkKvCXhdeB4QR52pF8/QXNVRyoJW9zxiBfsQFHyeJ42aWfnJRL84AVFuYCnyg6PStjitg+8oCgfgkmHuEGlBL94wY58EuYYcOjYlpDzjRfkVctwiauOEmbJMeQbL1hWb0TOEjq45jBMunjBHKSVlc4S/H+9QJCGUek68C7BBF9k1O04NpVgghcU6Hd3SEwkmOHLDom7S6YrwRRfdsl0nFIdCeb4A6c0yqJrYzcJ5njBou2W611MnCR4wVdcTHSvZioJ3vBrh0O5Sa2XZBK84QXJw93oXs+PSvCKX62OIusGKColNHnESwIUJiGaJW6VV8+Ex6hKRh7A1g9SbZLmCe+kjra7KYJUUPMwHTQyHrqAlHPcPBJSoNq2afeYeY2D1ZaEmobrrYEYDzxhkdJPWFjTcTjAyPEGI2YpG6v0Bpa06jOHW6XGaTur1DRxaZcQU7c1T17rC7BlBJy+/wfqq7Fr7G6HRQAAACV0RVh0ZGF0ZTpjcmVhdGUAMjAyNS0wNi0wNFQxNDo0NjoyMSswMDowMArbUkoAAAAldEVYdGRhdGU6bW9kaWZ5ADIwMTgtMTAtMDJUMjE6NTE6MjQrMDA6MDBEpyZsAAAAKHRFWHRkYXRlOnRpbWVzdGFtcAAyMDI1LTA2LTA0VDE0OjQ2OjUxKzAwOjAwJlbCMAAAABl0RVh0U29mdHdhcmUAd3d3Lmlua3NjYXBlLm9yZ5vuPBoAAAAASUVORK5CYII=" width="8px" height="8px" style="position: absolute; right: 2px; top: 2px; display: none;"></div></div></div><div id="loader-section"><div id="loader"><img src="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAABAAAAAQCAQAAAC1+jfqAAAABGdBTUEAALGPC/xhBQAAACBjSFJNAAB6JgAAgIQAAPoAAACA6AAAdTAAAOpgAAA6mAAAF3CculE8AAAAAmJLR0QA/4ePzL8AAAAJcEhZcwAAFxIAABcSAWef0lIAAAAHdElNRQfpBgwKLSwnbBkoAAAA5ElEQVQoz2XRPUoDURSG4Sc/2qUQxMYFSNSAYjOoCFqqWYQILiroGkylYDYQQxQUFyBEHCSSYoQUyuRaGOJc8p3iwvnee344xCo50ZHJpa7UzencUJjFg/3YbngT5J7cGghy19UIOLCKGxc+bWt69BwDS+Beip4elCNgAvJiqjJ9l51qOLSBkYp1H8ZFMJEVpg8yyZ9RnRUfK1uwiG8/xtN2M9UkEi1B0JJI1OIKX7o4Aq+6/z/jLSrzuao1W3a09a3YA6O4e9tE8K7jRS4Y2IyBXf3CekNn8xesu5TKZe4cK8XmL0olT2O8a5VXAAAAJXRFWHRkYXRlOmNyZWF0ZQAyMDI1LTA2LTEyVDEwOjQ0OjU0KzAwOjAwQl1s+AAAACV0RVh0ZGF0ZTptb2RpZnkAMjAyNS0wNi0xMlQxMDo0NDo1NCswMDowMDMA1EQAAAAodEVYdGRhdGU6dGltZXN0YW1wADIwMjUtMDYtMTJUMTA6NDU6NDQrMDA6MDBHfZ47AAAAAElFTkSuQmCC" height="15px"><div class="cssload-speeding-wheel"></div></div></div></div><div class="logo-img-container"><div class="logo-img"></div></div></div></div></div></div>'), window.innerWidth < 440 && (jQuery("#infFITS_sizefast").css("margin-top", "8px"), jQuery("#infFITS_sizefast").css("margin-bottom", "16px"))), null !== document.getElementById("inffits_cblock") && document.getElementById("inffits_cblock").remove(), (t = document.querySelector("body")).insertAdjacentHTML("beforebegin", '<div style="display:none;position: fixed;width: 100%;height: 100%;top: 0;left: 0;z-index: 1000000000000;background: rgba(0,0,0,0.5);transform:translate(100%)"><div id="infFITS_findSize" class="inffits_cblock" style="display:block;right:0;bottom:0;top:0;left:0 ;position:absolute; z-index:1;margin:auto"><div class="ctryon" style="position:absolute; width:100%; height:100%;top:0px; text-align:left; visibility:visible;  border:none; outline:none;  z-index:1; touch-action:none;"><iframe id="inffits_ctryon_window" style=" width:100%; height:100%; visibility:visible; position:relative; border:none;outline:none;  z-index:14;border-radius:10px;box-shadow: rgba(0, 0, 0, 0.15) 0px 2px 8px;" src="' + IFRAME_SRC_BASE + '?' + o + '"></iframe></div><div id="inf_close" style="position:absolute;top: -5px;z-index: 10000009;right: -10px;padding: 5px;height: 20px;width: 20px;border-radius: 50%;box-shadow: rgb(54 62 81 / 15%) 0px 0.0625rem 0.125rem 0.0625rem;background: white; opacity:1"><img src="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAEAAAABACAQAAAAAYLlVAAAABGdBTUEAALGPC/xhBQAAACBjSFJNAAB6JgAAgIQAAPoAAACA6AAAdTAAAOpgAAA6mAAAF3CculE8AAAAAmJLR0QAAKqNIzIAAAAJcEhZcwAADdcAAA3XAUIom3gAAAAHdElNRQflBB0KLijuiy0TAAABU0lEQVRo3sWZQZKCMBBFX825gtt4ZPEgbrQKV1wA9nHhFFUOxEmgO19XQtV/Tw2Q7gYI9ExM9HS0eHULLwAEbqTf953ojo/cF96NAP3yMZF4cnbFn3l+8HqYPw74KvzFJ+a1gJ/CGp+Y4bo66KOwhU9c4cSjgcI2/sEpf9JS4V+Cr0JRup9CcbKPQlWqvUJ1oq3CrjQ7hd1JNgqHUo4rHE44FmDyG+4PMVtFuaDvW5ZoeR3VK5ji6xXM8XUKLvhyBTd8mYIr/hsgFpx1VRiIRAZ/fF5hZGyDzys0w5cqOOJLFJzxb4Uhix8aFLdA3Fx4iXEP/qeFsfX3l/4F4kUovgzFNyLxrVj8MBI/jsUbEvGWTLwpFW/LxYWJuDQTF6fi8lzcoBC3aMRNKnGbTtyoFLdqxc1qcbtePLCQj2zkQyv52E4+uJSPbjv18BoCF8n4/kKAFws8B+VnA9YUAAAAJXRFWHRkYXRlOmNyZWF0ZQAyMDIxLTA0LTI5VDEwOjQ2OjAzKzAwOjAw6rtp5wAAACV0RVh0ZGF0ZTptb2RpZnkAMjAyMS0wNC0yOVQxMDo0NjowMyswMDowMJvm0VsAAAAZdEVYdFNvZnR3YXJlAHd3dy5pbmtzY2FwZS5vcmeb7jwaAAAAAElFTkSuQmCC" style="position:absolute;top:0;bottom:0;right:0;left:0;width:10px;margin:auto;"></div></div></div>'), document.getElementById("SizeAItag").addEventListener("click", function() {
                             jQuery("#infFITS_findSize").parent().fadeIn(), document.getElementById("inffits_ctryon_window").contentWindow.postMessage({
                                 MsgHeader: "FindinfFITS_SizeAItag"
                             }, "*")
-                        }), document.getElementById("infFITS_sizefast") && document.getElementById("infFITS_sizefast").addEventListener("click", function() {
+                        }), document.getElementById("infFITS_sizefast").addEventListener("click", function() {
                             var e = document.getElementById("inffits_ctryon_window").contentWindow;
                             e.postMessage({
                                 MsgHeader: "FindinfFITS_toggle"
@@ -588,8 +556,8 @@ function Trigger_infFITS() {
                         document.getElementById("inf_close").addEventListener(e, function() {
                             jQuery("#infFITS_findSize").parent().fadeOut()
                         });
-                        var t = document.querySelectorAll(".add-to-cart-btn, #btn-add-to-cart, .js-btn-main-add-to-cart, .btn-purchase-action"),
-                            i = document.querySelectorAll(".immediately-buy-btn, .js-btn-main-checkout, .btn-cart-fixed"),
+                        var t = document.querySelectorAll(".add-to-cart-btn"),
+                            i = document.querySelectorAll(".immediately-buy-btn"),
                             e = document.querySelectorAll(".btn-buy-now");
 
                         function n() {
@@ -616,7 +584,7 @@ function Trigger_infFITS() {
                                             i = e[1],
                                             n = e[2],
                                             a = e[3],
-                                            o = getProductId(),
+                                            o = FIXED_PRODUCT_ID,
                                             r = getProductTitle(),
                                             d = getQtyValue(),
                                             s = "",
@@ -655,7 +623,7 @@ function Trigger_infFITS() {
                                     }
 
                                     function e() {
-                                        var e = document.querySelectorAll(".add-to-cart-btn, #btn-add-to-cart, .js-btn-main-add-to-cart, .btn-purchase-action"),
+                                        var e = document.querySelectorAll(".add-to-cart-btn"),
                                             t = document.querySelectorAll(".immediately-buy-btn"),
                                             i = document.querySelectorAll(".btn-buy-now");
                                         0 < e.length && e.forEach(function(e) {
@@ -680,7 +648,7 @@ function Trigger_infFITS() {
                                                 i = e[1],
                                                 n = e[2],
                                                 a = e[3],
-                                                o = getProductId(),
+                                                o = FIXED_PRODUCT_ID,
                                                 r = getProductTitle(),
                                                 d = getQtyValue(),
                                                 s = "",
@@ -730,7 +698,7 @@ function Trigger_infFITS() {
                                         });
                                         var t = document.querySelectorAll(".colorbox .sku-li"),
                                             i = document.querySelectorAll(".sizebox .sku-li"),
-                                            n = document.querySelectorAll(".add-to-cart-btn, #btn-add-to-cart, .js-btn-main-add-to-cart, .btn-purchase-action"),
+                                            n = document.querySelectorAll(".add-to-cart-btn"),
                                             a = document.querySelectorAll(".large-image"),
                                             o = document.querySelectorAll(".media-carousel-img"),
                                             r = document.querySelectorAll(".ico-chevron-right"),
@@ -987,7 +955,7 @@ function Trigger_infFITS() {
                                         }, 1e3)
                                     }
                                     var p, f, i;
-                                    IS_PRODUCT_PAGE && (p = !1, "undefined" == typeof AWS ? ((i = document.createElement("script")).type = "text/javascript", i.src = "https://sdk.amazonaws.com/js/aws-sdk-2.243.1.min.js", i.async = !0, i.onload = function() {
+                                    isInfProductPage() && (p = !1, "undefined" == typeof AWS ? ((i = document.createElement("script")).type = "text/javascript", i.src = "https://sdk.amazonaws.com/js/aws-sdk-2.243.1.min.js", i.async = !0, i.onload = function() {
                                         e(), t()
                                     }, i.onerror = function() {
                                         console.error("AWS SDK 加載失敗")
@@ -995,7 +963,7 @@ function Trigger_infFITS() {
                                 }
                             }(v)
                     }! function e() {
-                        isProductPageReady() ? t() : setTimeout(e, 500)
+                        !isPageReady() ? setTimeout(e, 500) : t()
                     }()
                 }), window.addEventListener("message", function(e) {
                     if (b(e.origin))
@@ -1005,8 +973,8 @@ function Trigger_infFITS() {
                     else if ("AddtoCart" == e.data.MsgHeader) {
                         a = e.data.Size, r(), jQuery("#infFITS_findSize").parent().hide();
                         for (var t = 0; t < jQuery(".inf_sf-section-block").length; t++) a == document.querySelectorAll(".inf_sf-section-block")[t].querySelector("span").innerText && document.querySelectorAll(".inf_sf-section-block")[t].click();
-                        1 < document.querySelectorAll(".inf_sf-section-block").length && document.querySelectorAll(".inf_sf-section-block")[0].querySelector("span").innerText == document.querySelectorAll(".inf_sf-section-block")[1].querySelector("span").innerText && document.querySelectorAll(".inf_sf-section-block")[0].click()
-                    } else "POPUP_adjustment_Finish" != e.data.MsgHeader && "ToggleReady" != e.data.MsgHeader || (document.getElementById("SizeAItag").style.pointerEvents = "auto", document.getElementById("SizeAItag").style.opacity = 1, document.getElementById("infFITS_findSize").parentNode.style.transform = "none", null !== document.getElementById("inffits_cblock") && document.getElementById("inffits_cblock").remove(), "A" == g ? (document.getElementById("SizeAItag").style.display = "block", document.getElementById("infFITS_sizefast") && (document.getElementById("infFITS_sizefast").style.display = "block")) : "B" == g && (document.getElementById("SizeAItag").style.display = "none", document.getElementById("infFITS_sizefast") && (document.getElementById("infFITS_sizefast").style.display = "none")))
+                        document.querySelectorAll(".inf_sf-section-block")[0].querySelector("span").innerText == document.querySelectorAll(".inf_sf-section-block")[1].querySelector("span").innerText && document.querySelectorAll(".inf_sf-section-block")[0].click()
+                    } else "POPUP_adjustment_Finish" != e.data.MsgHeader && "ToggleReady" != e.data.MsgHeader || (document.getElementById("SizeAItag").style.pointerEvents = "auto", document.getElementById("SizeAItag").style.opacity = 1, document.getElementById("infFITS_findSize").parentNode.style.transform = "none", null !== document.getElementById("inffits_cblock") && document.getElementById("inffits_cblock").remove(), "A" == g ? (document.getElementById("SizeAItag").style.display = "block", document.getElementById("infFITS_sizefast").style.display = "block") : "B" == g && (document.getElementById("SizeAItag").style.display = "none", document.getElementById("infFITS_sizefast").style.display = "none"))
                 }, !1));
                 var i = document.createElement("style");
                 i.innerText = `
