@@ -1,3 +1,12 @@
 .DS_Store
 .vscode/settings.json
-/brashop.modemarie.com.tw
+/brashop.modemarie.com.tw/**
+!/brashop.modemarie.com.tw/www.inffits.com/
+!/brashop.modemarie.com.tw/www.inffits.com/gtm/
+!/brashop.modemarie.com.tw/www.inffits.com/gtm/gtm_MDMR_min.js
+!/brashop.modemarie.com.tw/inffits.com/
+!/brashop.modemarie.com.tw/inffits.com/webDesign/
+!/brashop.modemarie.com.tw/inffits.com/webDesign/HTML/
+!/brashop.modemarie.com.tw/inffits.com/webDesign/HTML/js/
+!/brashop.modemarie.com.tw/inffits.com/webDesign/HTML/js/iframe/
+!/brashop.modemarie.com.tw/inffits.com/webDesign/HTML/js/iframe/indexwebiframe_CAX_tw_mdmr.html

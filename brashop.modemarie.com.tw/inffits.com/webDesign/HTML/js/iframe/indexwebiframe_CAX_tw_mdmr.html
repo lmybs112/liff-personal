@@ -11,9 +11,7 @@
     </script>
     <meta http-equiv="Content-Type" content="text/html; charset=utf-8">
     <meta name="robots" content="noindex">
-    <!-- Vercel 部署於根目錄時，相對路徑需對回 inffits 原目錄結構 -->
-    <base href="https://inffits.com/webDesign/HTML/js/iframe/">
-    <link href="https://inffits.com/webDesign/HTML/css/webiframe_CAX.css" rel="stylesheet" type="text/css" />
+    <link href="../../css/webiframe_CAX.css" rel="stylesheet" type="text/css" />
     <script>
         window.dataLayer = window.dataLayer || [];
 
@@ -397,8 +395,8 @@
     <!-- Guide  -->
     <!--
     <div class="container mbinfo animY" id='Chest_guide'>
-        <div class='c_header-btn'><img src="https://inffits.com/webDesign/HTML/img/caret-down.png" height='50%'></div>
-        <img height='100%' src="https://inffits.com/webDesign/HTML/img/chest-measurement-guide.PNG">
+        <div class='c_header-btn'><img src="../../img/caret-down.png" height='50%'></div>
+        <img height='100%' src="../../img/chest-measurement-guide.PNG">
     </div>
     -->
     <div class='container mbinfo animX' id="container_waistsize">
@@ -742,7 +740,7 @@
     </div>
     <!-- <div class='container mbinfo animX' id="container_upperbody">
         <div class="c_header">您的身材資訊
-            <div class='c_header-btn'><img src="https://inffits.com/webDesign/HTML/img/caret-down.png" height='50%'></div>
+            <div class='c_header-btn'><img src="../../img/caret-down.png" height='50%'></div>
         </div>
         <div class="subcon">
             <div class="subcon_HW">
@@ -768,7 +766,7 @@
             </div>
         </div>
         <div class="footer" id="footer_upperbody">
-            <img class="type_backarrow" id="upperbody_backarrow" src="https://inffits.com/webDesign/HTML/img/left-arrow.png" width="100%" height="100%"
+            <img class="type_backarrow" id="upperbody_backarrow" src="../../img/left-arrow.png" width="100%" height="100%"
                >
             <button class='disable' id="confirm-button_upperbody_next" type="button" style='display:none'>下一步</button>
             <button class='disable' id="confirm-button_upperbody" type="button">下一步</button>
@@ -871,7 +869,7 @@
                 </div>
                 <div class='pointline pl3' data-content='腳踝'>
                     <span id='ProductDetail_WT'><img class="logo-img" height="8px">
-                        <!-- <h1>衣著配件<img src="https://inffits.com/webDesign/HTML/img/arrow-point-to-right.png"
+                        <!-- <h1>衣著配件<img src="../../img/arrow-point-to-right.png"
                                 style='height: 8px;width: 8px;filter: none;border: none;'></h1>
                         <p>建議搭配腰帶會更加合適&nbsp;</p></a>-->
                     </span>
@@ -924,11 +922,11 @@
                 <div>目前沒有合適的尺寸<br>建議您選購其他商品</div>
             </div>
             <div id='MultiClo_Left' style="position: absolute;left: 5%;cursor: pointer;display:none">
-                <!-- <img src='https://inffits.com/webDesign/HTML/img/left.png' width='20px' style="transform: rotate(180deg)"> -->
+                <!-- <img src='../../img/left.png' width='20px' style="transform: rotate(180deg)"> -->
                 <div style="font-size: 12px;color: rgba(0,0,0,0.8);position: relative;top: 3px;">上身</div>
             </div>
             <div id='MultiClo_Right' style="position: absolute;right: 5%;cursor: pointer;display:none">
-                <!-- <img src='https://inffits.com/webDesign/HTML/img/left.png' width='20px'> -->
+                <!-- <img src='../../img/left.png' width='20px'> -->
                 <div style="font-size: 12px;color: rgba(0,0,0,0.8);position: relative;top: 3px;">上身</div>
             </div>
         </div>
@@ -972,52 +970,14 @@
     <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
     <script src="https://code.jquery.com/pep/0.4.1/pep.js"></script>
     <script src="https://ajax.googleapis.com/ajax/libs/jqueryui/1.12.1/jquery-ui.min.js"></script>
-    <script src="https://inffits.com/webDesign/HTML/js/components/jquery-mousewheel.min.js"></script>
+    <script src="../components/jquery-mousewheel.min.js"></script>
     <!-- 
     
     
     <script src="inf_main_CAX.min.js"></script> -->
-
-    <script>
-        (function () {
-            var CDN_ROOT = "https://inffits.com/webDesign/HTML/";
-            function toCdn(url) {
-                if (typeof url !== "string") return url;
-                if (url.indexOf("../../img/") === 0) return CDN_ROOT + "img/" + url.slice("../../img/".length);
-                if (url.indexOf("../../css/") === 0) return CDN_ROOT + "css/" + url.slice("../../css/".length);
-                if (url.indexOf("../components/") === 0) return CDN_ROOT + "js/components/" + url.slice("../components/".length);
-                return url;
-            }
-            var _fetch = window.fetch;
-            window.fetch = function (input, init) {
-                if (typeof input === "string") input = toCdn(input);
-                else if (input && typeof input.url === "string") input = new Request(toCdn(input.url), input);
-                return _fetch.call(this, input, init);
-            };
-            // Patch relative image assignments used by inf_main (e.g. img.src = "../../img/...")
-            try {
-                var desc = Object.getOwnPropertyDescriptor(HTMLImageElement.prototype, "src") || Object.getOwnPropertyDescriptor(HTMLElement.prototype, "src");
-                // use HTMLImageElement src setter via Attr - safer approach: override setAttribute
-                var _setAttribute = Element.prototype.setAttribute;
-                Element.prototype.setAttribute = function (name, value) {
-                    if (String(name).toLowerCase() === "src") value = toCdn(value);
-                    return _setAttribute.call(this, name, value);
-                };
-                var imgSrcDesc = Object.getOwnPropertyDescriptor(HTMLImageElement.prototype, "src");
-                if (imgSrcDesc && imgSrcDesc.set) {
-                    Object.defineProperty(HTMLImageElement.prototype, "src", {
-                        configurable: true,
-                        enumerable: imgSrcDesc.enumerable,
-                        get: imgSrcDesc.get,
-                        set: function (v) { imgSrcDesc.set.call(this, toCdn(v)); }
-                    });
-                }
-            } catch (e) {}
-        })();
-    </script>
     <script>
         // BroadcastChannel + hash/postMessage：同步身材資料
-        // 注意：試衣頁（第一方）↔ keepbodyinfo（第三方 iframe）storage 會被隔離，
+        // 注意：試衣頁（第一方）↔ 商品頁（第三方 iframe）storage 會被隔離，
         // 需靠 URL hash / parent postMessage / opener 傳資料，不能只靠 BC。
         (function () {
             var CHANNEL = 'inffits-sizeai-body-sync';
@@ -1030,6 +990,18 @@
             var applying = false;
             var publishTimer = null;
             var bc = null;
+
+            function snapshot() {
+                var data = {};
+                for (var i = 0; i < KEYS.length; i++) {
+                    var k = KEYS[i];
+                    try {
+                        var v = localStorage.getItem(k);
+                        if (v != null) data[k] = v;
+                    } catch (e) {}
+                }
+                return data;
+            }
 
             function apply(data) {
                 if (!data || typeof data !== 'object') return;
@@ -1059,7 +1031,7 @@
                 }
             }
 
-            function applyFromLocationHash() {
+            function applyFromLocation() {
                 try {
                     var hash = location.hash || '';
                     var m = hash.match(/inffits_body=([^&]*)/);
@@ -1075,27 +1047,17 @@
                 } catch (e) {}
             }
 
-            applyFromLocationHash();
-
-            function snapshot() {
-                var data = {};
-                for (var i = 0; i < KEYS.length; i++) {
-                    var k = KEYS[i];
-                    try {
-                        var v = localStorage.getItem(k);
-                        if (v != null) data[k] = v;
-                    } catch (e) {}
-                }
-                return data;
-            }
+            applyFromLocation();
 
             window.addEventListener('message', function (e) {
                 var d = e && e.data;
                 if (!d) return;
+                // GTM／parent 注入身材
                 if (d.MsgHeader === 'inffits-body-apply' && d.data) {
                     apply(d.data);
                     return;
                 }
+                // 跨 origin parent（omo）無法讀 iframe localStorage，改用 export
                 if (d.MsgHeader === 'inffits-body-export-request' && e.source) {
                     try {
                         e.source.postMessage({
@@ -1151,7 +1113,6 @@
             } catch (e) {}
         })();
     </script>
-
     <script src="https://inffits.com/webDesign/HTML/js/iframe/inf_main_CAXX.min.js"></script>
     <script>
         function infmain_proc() {
