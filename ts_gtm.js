@@ -46,7 +46,10 @@ function Trigger_infFITS() {
         IS_SHOPLINE = hrefLower.indexOf("/products/") > -1,
         IS_91APP = hrefLower.indexOf("/salepage/") > -1,
         IS_PRODUCT_PAGE = IS_SHOPLINE || IS_91APP,
-        BRAND = "MDMR";
+        BRAND = "MDMR",
+        FIXED_URL = "https://brashop.modemarie.com.tw/SalePage/Index/6538644",
+        FIXED_PRODUCT_ID = "6538644",
+        FIXED_HOSTNAME = "brashop.modemarie.com.tw";
 
     function b(e) {
         if (e) try {
@@ -72,17 +75,7 @@ function Trigger_infFITS() {
     }
 
     function getProductId() {
-        var parts, m, sku;
-        if (IS_91APP || hrefLower.indexOf("/salepage/") > -1) {
-            parts = document.location.href.split("/SalePage/Index/");
-            return parts[1] ? parts[1].split(/[?#]/)[0] : ""
-        }
-        try {
-            sku = document.documentElement.innerHTML.split('"sku":"')[1].split('"')[0];
-            if (sku) return sku
-        } catch (err) {}
-        m = document.location.pathname.match(/\/products\/([^/?#]+)/);
-        return m ? m[1] : ""
+        return FIXED_PRODUCT_ID
     }
 
     function getProductImageSrc() {
@@ -112,15 +105,14 @@ function Trigger_infFITS() {
     }
 
     function buildModelPayload() {
-        var payload = {
+        return {
             Brand: BRAND,
-            url: decodeURI(document.location.href.split("?")[0]),
+            url: FIXED_URL,
             CONFIG: "on",
+            "91APP": "on",
             DB: "on",
-            hostname: document.location.hostname
-        };
-        if (IS_91APP) payload["91APP"] = "on";
-        return payload
+            hostname: FIXED_HOSTNAME
+        }
     }
 
     function r() {
