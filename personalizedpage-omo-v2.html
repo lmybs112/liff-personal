@@ -18,6 +18,8 @@
     />
     <!-- LIFF SDK -->
     <script charset="utf-8" src="https://static.line-scdn.net/liff/edge/2/sdk.js"></script>
+    <!-- 身材同步（外部引入） -->
+    <script src="https://liff-personal.vercel.app/inffits-body-sync-omo.js"></script>
     <!-- Google Analytics 4 (GA4) — infFITS 個人化推薦行為追蹤 -->
     <script>
       ;(function () {
@@ -4624,130 +4626,18 @@
       const tryOn = params.get('tryon') || 'false'
       const type = params.get('type') || 'pd'
 
-      // 身材／推薦尺寸跨頁同步基礎建設（不改商品 URL、不改 iframe URL）
-      // - rel=opener：子頁可用 window.opener 來要資料
-      // - 點擊時在既有 href 後附加 #inffits_body=
-      // - 跨 origin iframe 無法讀 localStorage，改用 export-request 快取到 sessionStorage
+      // 身材／推薦尺寸跨頁同步：外部 inffits-body-sync-omo.js（不改商品 URL、不改 iframe URL）
       const PRODUCT_LINK_SELECTOR =
         'a.embeddedItem, #tryonProductLink, #tryonQrLink, #tryonProductExternalLink, a#tryonProductName'
-      const BODY_SYNC_KEYS = [
-        'BodyID', 'BodyID_color', 'BodyID_size', 'BodyMID_size',
-        'Pattern_Prefers', 'SizeAIFast_switch', 'TID',
-        'BodyID0', 'BodyID1', 'BodyID2', 'BodyID3', 'BodyID4', 'BodyID5',
-        'CLOTHLIST', 'tb_cloth'
-      ]
-      var pendingBodySyncReplies = []
-      function encodeBodyPayload(obj) {
-        try {
-          var json = JSON.stringify(obj)
-          return btoa(unescape(encodeURIComponent(json)))
-            .replace(/\+/g, '-')
-            .replace(/\//g, '_')
-            .replace(/=+$/g, '')
-        } catch (e) {
-          return ''
-        }
-      }
-      function cacheBodySnapshot(data) {
-        if (!data || (!data.BodyID && !data.BodyID_size && !data.BodyID_color)) return null
-        try {
-          sessionStorage.setItem('inffits_body_sync', JSON.stringify(data))
-        } catch (e) {}
-        return data
-      }
-      function requestTryonBodyExport() {
-        var iframe = document.getElementById('inffits_ctryon_window')
-        if (!iframe || !iframe.contentWindow) return
-        try {
-          iframe.contentWindow.postMessage({ MsgHeader: 'inffits-body-export-request' }, '*')
-        } catch (e) {}
-      }
-      function snapshotTryonBody() {
-        var data = {}
-        var iframe = document.getElementById('inffits_ctryon_window')
-        try {
-          var ls = iframe && iframe.contentWindow && iframe.contentWindow.localStorage
-          if (ls) {
-            BODY_SYNC_KEYS.forEach(function (k) {
-              var v = ls.getItem(k)
-              if (v != null) data[k] = v
-            })
-          }
-        } catch (e) {
-          // 跨 origin：改走 sessionStorage 快取（由 export-response 寫入）
-        }
-        if (!data.BodyID && !data.BodyID_size && !data.BodyID_color) {
-          try {
-            var cached = sessionStorage.getItem('inffits_body_sync')
-            if (cached) data = JSON.parse(cached) || data
-          } catch (e2) {}
-        }
-        if (data.BodyID || data.BodyID_size || data.BodyID_color) {
-          return cacheBodySnapshot(data)
-        }
-        requestTryonBodyExport()
-        return null
+      const BodySyncOmo = window.InfFITSBodySyncOmo
+      if (BodySyncOmo) {
+        BodySyncOmo.init({ productLinkSelector: PRODUCT_LINK_SELECTOR })
+      } else {
+        console.warn('[omo-v2] InfFITSBodySyncOmo 未載入，跨頁身材同步停用')
       }
       function appendBodyHashToUrl(url) {
-        if (!url || url === '#') return url
-        var data = snapshotTryonBody()
-        if (!data) return url
-        var payload = encodeBodyPayload(data)
-        if (!payload || payload.length > 3500) return url
-        return String(url).split('#')[0] + '#inffits_body=' + payload
+        return BodySyncOmo ? BodySyncOmo.appendBodyHashToUrl(url) : url
       }
-      function replyBodySync(source, origin, data) {
-        if (!source || !data) return
-        try {
-          source.postMessage(
-            { type: 'inffits-body-sync-response', data: data, ts: Date.now() },
-            origin && origin !== 'null' ? origin : '*'
-          )
-        } catch (err) {}
-      }
-      document.addEventListener(
-        'click',
-        function (e) {
-          var a = e.target && e.target.closest && e.target.closest(PRODUCT_LINK_SELECTOR)
-          if (!a) return
-          var href = a.getAttribute('href')
-          if (!href || href === '#') return
-          requestTryonBodyExport()
-          a.setAttribute('href', appendBodyHashToUrl(href))
-          a.setAttribute('target', '_blank')
-          a.setAttribute('rel', 'opener')
-        },
-        true
-      )
-      window.addEventListener('message', function (e) {
-        var msg = e && e.data
-        if (!msg) return
-        if (msg.MsgHeader === 'inffits-body-export-response' && msg.data) {
-          var cached = cacheBodySnapshot(msg.data)
-          if (cached && pendingBodySyncReplies.length) {
-            pendingBodySyncReplies.splice(0).forEach(function (item) {
-              replyBodySync(item.source, item.origin, cached)
-            })
-          }
-          return
-        }
-        var header = msg.MsgHeader || msg.header
-        if (header === 'SizeAI_Fast' || header === 'FML_Done' || header === 'bid' || header === 'IDRxGet' || header === 'IDRxReady') {
-          setTimeout(requestTryonBodyExport, 100)
-          setTimeout(requestTryonBodyExport, 800)
-          return
-        }
-        if (msg.type !== 'inffits-body-sync-request') return
-        var data = snapshotTryonBody()
-        if (data) {
-          replyBodySync(e.source, e.origin, data)
-          return
-        }
-        if (e.source) {
-          pendingBodySyncReplies.push({ source: e.source, origin: e.origin })
-          requestTryonBodyExport()
-        }
-      })
 
       const TRYON_COPILOT_ENDPOINT = 'https://api.inffits.com/pid_get_copilot_status/model'
       const TRYON_IFRAME_READY_TIMEOUT_MS = 15000

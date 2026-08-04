@@ -18,6 +18,8 @@
     />
     <!-- LIFF SDK -->
     <script charset="utf-8" src="https://static.line-scdn.net/liff/edge/2/sdk.js"></script>
+    <!-- 身材同步（外部引入，方便測共用腳本） -->
+    <script src="https://liff-personal.vercel.app/inffits-body-sync-omo.js"></script>
     <!-- Google Analytics 4 (GA4) — infFITS 個人化推薦行為追蹤 -->
     <script>
       ;(function () {
@@ -4080,7 +4082,8 @@
       };
 
       const params = new URLSearchParams(window.location.search)
-      // Demo：商品一律導向 keepbodyinfo；試衣 iframe 固定 MDMR（對應 brashop.../indexwebiframe_CAX_tw_mdmr.html）
+      // Demo：商品一律導向 keepbodyinfo；試衣 iframe 固定 MDMR
+      // 身材同步改外部引入 inffits-body-sync-omo.js（iframe 端為 inffits-body-sync-iframe.js）
       const KEEPBODYINFO_URL = 'https://infshop.shoplineapp.com/products/keepbodyinfo'
       const FIXED_MODEMARIE_PRODUCT_URL = 'https://brashop.modemarie.com.tw/SalePage/Index/6538644'
       const MDMR_IFRAME_BASE = 'https://liff-personal.vercel.app/indexwebiframe_CAX_tw_mdmr.html'
@@ -4090,61 +4093,36 @@
       const tryOn = params.get('tryon') || 'false'
       const type = params.get('type') || 'pd'
 
-      // 寫死：所有商品卡／試衣 CTA 一律開 keepbodyinfo（含 embedded.js 動態注入）
-      // 必須 rel=opener：keepbodyinfo 才能用 window.opener 跟試衣頁要身材資料
-      // （第三方 iframe 的 localStorage／BroadcastChannel 會被瀏覽器隔離，不能只靠 BC）
       const PRODUCT_LINK_SELECTOR =
         'a.embeddedItem, #tryonProductLink, #tryonQrLink, #tryonProductExternalLink, a#tryonProductName'
-      const BODY_SYNC_KEYS = [
-        'BodyID', 'BodyID_color', 'BodyID_size', 'BodyMID_size',
-        'Pattern_Prefers', 'SizeAIFast_switch', 'TID',
-        'BodyID0', 'BodyID1', 'BodyID2', 'BodyID3', 'BodyID4', 'BodyID5',
-        'CLOTHLIST', 'tb_cloth'
-      ]
 
-      function encodeBodyPayload(obj) {
-        try {
-          var json = JSON.stringify(obj)
-          return btoa(unescape(encodeURIComponent(json)))
-            .replace(/\+/g, '-')
-            .replace(/\//g, '_')
-            .replace(/=+$/g, '')
-        } catch (e) {
-          return ''
-        }
-      }
-
-      function snapshotTryonBody() {
-        var data = {}
-        var iframe = document.getElementById('inffits_ctryon_window')
-        try {
-          var ls = iframe && iframe.contentWindow && iframe.contentWindow.localStorage
-          if (ls) {
-            BODY_SYNC_KEYS.forEach(function (k) {
-              var v = ls.getItem(k)
-              if (v != null) data[k] = v
-            })
+      const BodySyncOmo = window.InfFITSBodySyncOmo
+      if (BodySyncOmo) {
+        BodySyncOmo.init({
+          productLinkSelector: PRODUCT_LINK_SELECTOR,
+          // 點擊時不論原商品連結，一律改 keepbodyinfo + 身材 hash
+          rewriteUrl: function (urlWithHash) {
+            var idx = String(urlWithHash).indexOf('#inffits_body=')
+            var hashPart = idx >= 0 ? String(urlWithHash).slice(idx) : ''
+            if (!hashPart) {
+              var data = BodySyncOmo.snapshotTryonBody()
+              if (data) {
+                var payload = BodySyncOmo.encodeBodyPayload(data)
+                if (payload) hashPart = '#inffits_body=' + payload
+              }
+            }
+            return KEEPBODYINFO_URL + hashPart
           }
-        } catch (e) {}
-        if (!data.BodyID && !data.BodyID_size && !data.BodyID_color) {
-          try {
-            var cached = sessionStorage.getItem('inffits_body_sync')
-            if (cached) data = JSON.parse(cached) || data
-          } catch (e2) {}
-        }
-        if (data.BodyID || data.BodyID_size || data.BodyID_color) {
-          try {
-            sessionStorage.setItem('inffits_body_sync', JSON.stringify(data))
-          } catch (e3) {}
-          return data
-        }
-        return null
+        })
+      } else {
+        console.warn('[demo] InfFITSBodySyncOmo 未載入，跨頁身材同步停用')
       }
 
       function buildKeepbodyinfoUrlWithBody() {
-        var data = snapshotTryonBody()
+        if (!BodySyncOmo) return KEEPBODYINFO_URL
+        var data = BodySyncOmo.snapshotTryonBody()
         if (!data) return KEEPBODYINFO_URL
-        var payload = encodeBodyPayload(data)
+        var payload = BodySyncOmo.encodeBodyPayload(data)
         if (!payload || payload.length > 3500) return KEEPBODYINFO_URL
         return KEEPBODYINFO_URL + '#inffits_body=' + payload
       }
@@ -4158,35 +4136,6 @@
           a.setAttribute('rel', 'opener')
         })
       }
-
-      // 點擊當下再帶一次最新身材（hash），並保留 opener
-      document.addEventListener(
-        'click',
-        function (e) {
-          var a = e.target && e.target.closest && e.target.closest(PRODUCT_LINK_SELECTOR)
-          if (!a) return
-          var url = buildKeepbodyinfoUrlWithBody()
-          a.setAttribute('href', url)
-          a.setAttribute('data-link', url)
-          a.setAttribute('target', '_blank')
-          a.setAttribute('rel', 'opener')
-        },
-        true
-      )
-
-      // keepbodyinfo（opener 子頁）來要身材資料
-      window.addEventListener('message', function (e) {
-        var msg = e && e.data
-        if (!msg || msg.type !== 'inffits-body-sync-request') return
-        var data = snapshotTryonBody()
-        if (!data || !e.source) return
-        try {
-          e.source.postMessage(
-            { type: 'inffits-body-sync-response', data: data, ts: Date.now() },
-            e.origin && e.origin !== 'null' ? e.origin : '*'
-          )
-        } catch (err) {}
-      })
 
       if (typeof MutationObserver !== 'undefined') {
         new MutationObserver(function () {
